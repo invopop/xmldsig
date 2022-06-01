@@ -38,7 +38,7 @@ func main() {
 
 ## Certificates
 
-Signing and certificates can be a pain in the ass. OpenSSL is the tool to use for clarifying what the situation is and this page has a useful set of commands: https://www.sslshopper.com/article-most-common-openssl-commands.html
+Signing and certificates can be overwhelming. OpenSSL is the tool to use for clarifying what the situation is and this page has a useful set of commands: https://www.sslshopper.com/article-most-common-openssl-commands.html
 
 This library requires certificates in PKCS12 DER format (`.pki` or `.p12` extension). If you don't have something like that, use the OpenSSL tools to convert between X509 (`.pem`) format and PKCS12.
 
