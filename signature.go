@@ -462,8 +462,6 @@ func (s *Signature) buildSignatureValue() error {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	fmt.Printf("SIG INFO IS:\n`%s`\n\n", string(data))
-
 	signatureValue, err := s.opts.cert.Sign(string(data[:]))
 	if err != nil {
 		return err
@@ -511,7 +509,6 @@ func canonicalize(data []byte, ns Namespaces) ([]byte, error) {
 			}
 		}
 		if !match {
-			fmt.Printf("ADDING: %s\n", v.Key)
 			r.Attr = append(r.Attr, v)
 		}
 	}
@@ -577,8 +574,6 @@ func digestBytes(data []byte, ns Namespaces) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("DATA IS:\n`%s`\n\n", string(out))
-
 	sum := sha512.Sum512(out)
 	return base64.StdEncoding.EncodeToString(sum[:]), nil
 }
