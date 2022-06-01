@@ -68,12 +68,14 @@ func getCertificate() (*xmldsig.Certificate, error) {
 	return xmldsig.LoadCertificate(testCertificateFile, testCertificatePass)
 }
 
+/*
 func getExampleXML(t *testing.T) []byte {
 	data, err := os.ReadFile("./data/invoice-vat.xml")
 	require.NoError(t, err)
 
 	return data
 }
+*/
 
 func getTimestamp(signature *xmldsig.Signature) string {
 	return signature.Object.QualifyingProperties.

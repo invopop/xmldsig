@@ -215,7 +215,6 @@ const (
 	sigQualifyingPropertiesIDFormat = "Signature-%s-QualifyingProperties"
 	referenceIDFormat               = "Reference-%s"
 	certificateIDFormat             = "Certificate-%s"
-	signerRole                      = "tercero" // "emisor"
 )
 
 func newSignature(data []byte, opts ...Option) (*Signature, error) {
