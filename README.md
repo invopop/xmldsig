@@ -4,6 +4,10 @@ For signing XML documents.
 
 This project is the result of extracting the Signature and Certificate manipulation code from the FacturaE project. As such, it's currently optimised for that use-case.
 
+## NOTES
+
+- Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the structs you intent to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
+
 ## Certificates
 
 Signing and certificates can be a pain in the ass. OpenSSL is the tool to use for clarifying what the situation is and this page has a useful set of commands: https://www.sslshopper.com/article-most-common-openssl-commands.html
