@@ -8,6 +8,34 @@ This project is the result of extracting the Signature and Certificate manipulat
 
 - Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the structs you intent to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
 
+## Usage Example
+
+```go
+type SampleDoc struct {
+	XMLName       xml.Name `xml:"test:SampleDoc"`
+	TestNamespace string   `xml:"xmlns:test,attr"`
+	Title         string
+	Signature     *xmldsig.Signature `xml:"ds:Signature,omitempty"` // Add signature object!
+}
+
+func main() {
+    doc := &SampleDoc{
+		TestNamespace: "http://invopop.com/xml/test",
+		Title:         "This is a test",
+	}
+    data, _ := xml.Marshal(doc)
+    cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
+    doc.Signature, _ = xmldsig.Sign(data,
+		xmldsig.WithCertificate(cert),
+		xmldsig.WithXAdES(xmldsig.XAdESThirdParty, "test"),
+	)
+
+    // Now output the data
+    out, _ := xml.Marshal(doc)
+    fmt.Println(string(out))
+}
+```
+
 ## Certificates
 
 Signing and certificates can be a pain in the ass. OpenSSL is the tool to use for clarifying what the situation is and this page has a useful set of commands: https://www.sslshopper.com/article-most-common-openssl-commands.html
