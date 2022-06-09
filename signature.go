@@ -29,7 +29,8 @@ const (
 
 // Algorithms
 const (
-	AlgSHA512        = "http://www.w3.org/2001/04/xmlenc#sha512"
+	AlgEncSHA256     = "http://www.w3.org/2001/04/xmlenc#sha256"
+	AlgEncSHA512     = "http://www.w3.org/2001/04/xmlenc#sha512"
 	AlgDSigSHA1      = "http://www.w3.org/2000/09/xmldsig#sha1"
 	AlgDSigRSASHA1   = "http://www.w3.org/2000/09/xmldsig#rsa-sha1"
 	AlgDSigRSASHA256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
@@ -243,7 +244,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		DSigNamespace: NamespaceDSig,
 	}
 
-	if o.xaeds != "" {
+	if o.xades != nil {
 		if err := s.buildQualifyingProperties(); err != nil {
 			return nil, fmt.Errorf("qualifying properties: %w", err)
 		}
@@ -302,7 +303,7 @@ func (s *Signature) buildQualifyingProperties() error {
 				SigningCertificate: &SigningCertificate{
 					CertDigest: &Digest{
 						Method: &AlgorithmMethod{
-							Algorithm: AlgSHA512,
+							Algorithm: AlgEncSHA512,
 						},
 						Value: cert.Fingerprint(),
 					},
@@ -311,14 +312,14 @@ func (s *Signature) buildQualifyingProperties() error {
 						SerialNumber: cert.SerialNumber(),
 					},
 				},
-				PolicyIdentifier: policyIdentifier31(),
+				PolicyIdentifier: s.xadesPolicyIdentifier(),
 				SignerRole: &SignerRole{
-					ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xaeds.String()}},
+					ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xades.Role.String()}},
 				},
 			},
 			DataObjectProperties: &DataObjectFormat{
 				ObjectReference: "#" + s.referenceID,
-				Description:     s.opts.xaedsDesc,
+				Description:     s.opts.xades.Description,
 				ObjectIdentifier: &ObjectIdentifier{
 					Identifier: &Identifier{
 						Qualifier: "OIDAsURN",
@@ -336,17 +337,18 @@ func (s *Signature) buildQualifyingProperties() error {
 	return nil
 }
 
-func policyIdentifier31() *PolicyIdentifier {
+func (s *Signature) xadesPolicyIdentifier() *PolicyIdentifier {
+	policy := s.opts.xades.Policy
 	return &PolicyIdentifier{
 		SigPolicyID: &SigPolicyID{
-			Identifier:  "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
-			Description: "Política de Firma FacturaE v3.1",
+			Identifier:  policy.URL,
+			Description: policy.Description,
 		},
 		SigPolicyHash: &Digest{
 			Method: &AlgorithmMethod{
-				Algorithm: AlgDSigSHA1,
+				Algorithm: policy.Algorithm,
 			},
-			Value: "Ohixl6upD6av8N7pEvDABhEL6hM=",
+			Value: policy.Hash,
 		},
 	}
 }
@@ -418,13 +420,13 @@ func (s *Signature) buildSignedInfo() error {
 	si.Reference = append(si.Reference, &Reference{
 		URI: "#" + s.KeyInfo.ID,
 		DigestMethod: &AlgorithmMethod{
-			Algorithm: AlgSHA512,
+			Algorithm: AlgEncSHA512,
 		},
 		DigestValue: keyInfoDigest,
 	})
 
 	// Finally, if present, add the XAdES digests
-	if s.opts.xaeds != "" {
+	if s.opts.xades != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
 		spDigest, err := digest(sp, ns)
@@ -435,7 +437,7 @@ func (s *Signature) buildSignedInfo() error {
 			URI:  "#" + sp.ID,
 			Type: "http://uri.etsi.org/01903#SignedProperties",
 			DigestMethod: &AlgorithmMethod{
-				Algorithm: AlgSHA512,
+				Algorithm: AlgEncSHA512,
 			},
 			DigestValue: spDigest,
 		})
