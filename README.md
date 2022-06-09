@@ -23,11 +23,22 @@ func main() {
 		TestNamespace: "http://invopop.com/xml/test",
 		Title:         "This is a test",
 	}
+	// Using XAdES FacturaE example policy config
+	xades := &xmldsig.XAdESConfig{
+		Role:        xmldsig.XAdESThirdParty,
+		Description: "test",
+		Policy: &xmldsig.XAdESPolicyConfig{
+			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
+			Description: "Política de Firma FacturaE v3.1",
+			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
+			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
+		},
+	}
     data, _ := xml.Marshal(doc)
     cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
     doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXAdES(xmldsig.XAdESThirdParty, "test"),
+		xmldsig.WithXAdES(xades),
 	)
 
     // Now output the data
