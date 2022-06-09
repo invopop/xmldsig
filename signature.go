@@ -244,7 +244,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		DSigNamespace: NamespaceDSig,
 	}
 
-	if o.xaeds != nil {
+	if o.xades != nil {
 		if err := s.buildQualifyingProperties(); err != nil {
 			return nil, fmt.Errorf("qualifying properties: %w", err)
 		}
@@ -314,12 +314,12 @@ func (s *Signature) buildQualifyingProperties() error {
 				},
 				PolicyIdentifier: s.xadesPolicyIdentifier(),
 				SignerRole: &SignerRole{
-					ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xaeds.Role.String()}},
+					ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xades.Role.String()}},
 				},
 			},
 			DataObjectProperties: &DataObjectFormat{
 				ObjectReference: "#" + s.referenceID,
-				Description:     s.opts.xaeds.Description,
+				Description:     s.opts.xades.Description,
 				ObjectIdentifier: &ObjectIdentifier{
 					Identifier: &Identifier{
 						Qualifier: "OIDAsURN",
@@ -338,7 +338,7 @@ func (s *Signature) buildQualifyingProperties() error {
 }
 
 func (s *Signature) xadesPolicyIdentifier() *PolicyIdentifier {
-	policy := s.opts.xaeds.Policy
+	policy := s.opts.xades.Policy
 	return &PolicyIdentifier{
 		SigPolicyID: &SigPolicyID{
 			Identifier:  policy.URL,
@@ -426,7 +426,7 @@ func (s *Signature) buildSignedInfo() error {
 	})
 
 	// Finally, if present, add the XAdES digests
-	if s.opts.xaeds != nil {
+	if s.opts.xades != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
 		spDigest, err := digest(sp, ns)

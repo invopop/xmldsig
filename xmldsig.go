@@ -17,7 +17,7 @@ type options struct {
 	namespaces   Namespaces // map of namespace name to URL
 	timestampURL string
 	cert         *Certificate
-	xaeds        *XAdESConfig
+	xades        *XAdESConfig
 }
 
 // XAdESSignerRole defines the accepted signer roles
@@ -70,7 +70,7 @@ func WithDocID(id string) Option {
 // WithXAdES adds the XAdES policy with the suggested role.
 func WithXAdES(config *XAdESConfig) Option {
 	return func(o *options) error {
-		o.xaeds = config
+		o.xades = config
 		return nil
 	}
 }
