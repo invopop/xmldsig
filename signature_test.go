@@ -32,7 +32,7 @@ func TestSignature(t *testing.T) {
 	t.Run("should return a signature", func(t *testing.T) {
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xmldsig.XAdESThirdParty, "test"),
+			xmldsig.WithXAdES(xadesConfig()),
 		)
 		assert.Nil(t, err)
 		assert.NotEmpty(t, signature.Value.Value)
@@ -47,7 +47,7 @@ func TestSignature(t *testing.T) {
 	t.Run("should not add the timestamp when parameter is false", func(t *testing.T) {
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xmldsig.XAdESThirdParty, "test"),
+			xmldsig.WithXAdES(xadesConfig()),
 		)
 		assert.Nil(t, err)
 		assert.Nil(t, signature.Object.QualifyingProperties.UnsignedProperties)
@@ -56,12 +56,25 @@ func TestSignature(t *testing.T) {
 	t.Run("should add the timestamp when parameter is true", func(t *testing.T) {
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xmldsig.XAdESThirdParty, "test"),
+			xmldsig.WithXAdES(xadesConfig()),
 			xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA),
 		)
 		require.NoError(t, err)
 		assert.NotEmpty(t, getTimestamp(signature))
 	})
+}
+
+func xadesConfig() *xmldsig.XAdESConfig {
+	return &xmldsig.XAdESConfig{
+		Role:        xmldsig.XAdESThirdParty,
+		Description: "test",
+		Policy: &xmldsig.XAdESPolicyConfig{
+			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
+			Description: "Política de Firma FacturaE v3.1",
+			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
+			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
+		},
+	}
 }
 
 func getCertificate() (*xmldsig.Certificate, error) {

@@ -17,8 +17,7 @@ type options struct {
 	namespaces   Namespaces // map of namespace name to URL
 	timestampURL string
 	cert         *Certificate
-	xaeds        XAdESSignerRole
-	xaedsDesc    string // description of the XAdES role
+	xaeds        *XAdESConfig
 }
 
 // XAdESSignerRole defines the accepted signer roles
@@ -30,6 +29,21 @@ const (
 	XAdESCustomer   XAdESSignerRole = "customer"
 	XAdESThirdParty XAdESSignerRole = "third party"
 )
+
+// XAdESConfig defines what is expected for the configuration.
+type XAdESConfig struct {
+	Role        XAdESSignerRole    `json:"role"`
+	Description string             `json:"description,omitempty"`
+	Policy      *XAdESPolicyConfig `json:"policy"`
+}
+
+// XAdESPolicyConfig defines what policy details should be used.
+type XAdESPolicyConfig struct {
+	URL         string `json:"url"`                   // URL to the policy definition
+	Description string `json:"description,omitempty"` // Optional human description
+	Algorithm   string `json:"algorithm"`             // eg. SHA1 o SHA256
+	Hash        string `json:"hash"`                  // Base64 encoded hash (usually provided with policy)
+}
 
 // String converts the XAdES role into a string
 func (r XAdESSignerRole) String() string {
@@ -54,10 +68,9 @@ func WithDocID(id string) Option {
 }
 
 // WithXAdES adds the XAdES policy with the suggested role.
-func WithXAdES(role XAdESSignerRole, desc string) Option {
+func WithXAdES(config *XAdESConfig) Option {
 	return func(o *options) error {
-		o.xaeds = role
-		o.xaedsDesc = desc
+		o.xaeds = config
 		return nil
 	}
 }
