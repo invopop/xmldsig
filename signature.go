@@ -94,8 +94,9 @@ type KeyInfo struct {
 	XMLName xml.Name `xml:"ds:KeyInfo"`
 	ID      string   `xml:"Id,attr"`
 
-	X509Data *X509Data `xml:"ds:X509Data,omitempty"`
-	KeyValue *KeyValue `xml:"ds:KeyValue"`
+	X509Data               *X509Data               `xml:"ds:X509Data,omitempty"`
+	KeyValue               *KeyValue               `xml:"ds:KeyValue,omitempty"`
+	SecurityTokenReference *SecurityTokenReference `xml:"wsse:SecurityTokenReference,omitempty"`
 }
 
 // X509Data contains ...

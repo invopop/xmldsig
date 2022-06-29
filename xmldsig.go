@@ -102,6 +102,11 @@ func Sign(data []byte, opts ...Option) (*Signature, error) {
 	return newSignature(data, opts...)
 }
 
+// SignSOAP creates a Security element for a SOAP operation
+func SignSOAP(data []byte, opts ...Option) (*Security, error) {
+	return newSOAPSignature(data, opts...)
+}
+
 // Add will add the namespace and return a new instance of the map without
 // modifying the original.
 func (ns Namespaces) Add(name, url string) Namespaces {
