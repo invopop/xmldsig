@@ -43,13 +43,14 @@ const ISO8601 = "2006-01-02T15:04:05-07:00"
 // Signature contains the complete signature to be added
 // to the document.
 type Signature struct {
-	DSigNamespace string `xml:"xmlns:ds,attr,omitempty"`
-	ID            string `xml:"Id,attr"`
+	DSigNamespace string   `xml:"xmlns:ds,attr,omitempty"`
+	ID            string   `xml:"Id,attr"`
+	XMLName       xml.Name `xml:"ds:Signature"`
 
 	SignedInfo *SignedInfo `xml:"ds:SignedInfo"`
 	Value      *Value      `xml:"ds:SignatureValue"`
 	KeyInfo    *KeyInfo    `xml:"ds:KeyInfo"`
-	Object     *Object     `xml:"ds:Object"`
+	Object     *Object     `xml:"ds:Object,omitempty"`
 
 	doc         []byte   `xml:"-"`
 	opts        *options `xml:"-"`
@@ -95,7 +96,7 @@ type KeyInfo struct {
 	ID      string   `xml:"Id,attr"`
 
 	X509Data *X509Data `xml:"ds:X509Data,omitempty"`
-	KeyValue *KeyValue `xml:"ds:KeyValue"`
+	KeyValue *KeyValue `xml:"ds:KeyValue,omitempty"`
 }
 
 // X509Data contains ...
