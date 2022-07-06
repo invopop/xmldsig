@@ -7,10 +7,10 @@ import (
 	"github.com/beevik/etree"
 )
 
-// Canonicalize will take the data and attempt to combine the namespaces provided.
+// canonicalize will take the data and attempt to combine the namespaces provided.
 // It doesn't do much more than that, as the golang xml lib already does most of the
 // work of creating standard XML.
-func Canonicalize(data []byte, ns Namespaces) ([]byte, error) {
+func canonicalize(data []byte, ns Namespaces) ([]byte, error) {
 	d := etree.NewDocument()
 	d.WriteSettings = etree.WriteSettings{
 		CanonicalEndTags: true,

@@ -389,7 +389,7 @@ func (s *Signature) buildSignedInfo() error {
 	}
 
 	// Add the document digest
-	docDigest, err := DigestBytes(s.doc, s.opts.namespaces)
+	docDigest, err := digestBytes(s.doc, s.opts.namespaces)
 	if err != nil {
 		return fmt.Errorf("document digest: %w", err)
 	}
@@ -410,7 +410,7 @@ func (s *Signature) buildSignedInfo() error {
 
 	// Add the key info
 	ns := s.opts.namespaces.Add(DSig, NamespaceDSig)
-	keyInfoDigest, err := DigestXML(s.KeyInfo, ns)
+	keyInfoDigest, err := digest(s.KeyInfo, ns)
 	if err != nil {
 		return fmt.Errorf("key info digest: %w", err)
 	}
@@ -426,7 +426,7 @@ func (s *Signature) buildSignedInfo() error {
 	if s.opts.xades != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
-		spDigest, err := DigestXML(sp, ns)
+		spDigest, err := digest(sp, ns)
 		if err != nil {
 			return fmt.Errorf("xades digest: %w", err)
 		}
@@ -452,7 +452,7 @@ func (s *Signature) buildSignatureValue() error {
 		return err
 	}
 	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
-	data, err = Canonicalize(data, ns)
+	data, err = canonicalize(data, ns)
 	if err != nil {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
