@@ -1,13 +1,9 @@
 package xmldsig
 
 import (
-	"crypto/sha512"
-	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/beevik/etree"
@@ -43,13 +39,14 @@ const ISO8601 = "2006-01-02T15:04:05-07:00"
 // Signature contains the complete signature to be added
 // to the document.
 type Signature struct {
-	DSigNamespace string `xml:"xmlns:ds,attr,omitempty"`
-	ID            string `xml:"Id,attr"`
+	DSigNamespace string   `xml:"xmlns:ds,attr,omitempty"`
+	ID            string   `xml:"Id,attr"`
+	XMLName       xml.Name `xml:"ds:Signature"`
 
 	SignedInfo *SignedInfo `xml:"ds:SignedInfo"`
 	Value      *Value      `xml:"ds:SignatureValue"`
 	KeyInfo    *KeyInfo    `xml:"ds:KeyInfo"`
-	Object     *Object     `xml:"ds:Object"`
+	Object     *Object     `xml:"ds:Object,omitempty"`
 
 	doc         []byte   `xml:"-"`
 	opts        *options `xml:"-"`
@@ -95,7 +92,7 @@ type KeyInfo struct {
 	ID      string   `xml:"Id,attr"`
 
 	X509Data *X509Data `xml:"ds:X509Data,omitempty"`
-	KeyValue *KeyValue `xml:"ds:KeyValue"`
+	KeyValue *KeyValue `xml:"ds:KeyValue,omitempty"`
 }
 
 // X509Data contains ...
@@ -450,9 +447,6 @@ func (s *Signature) buildSignedInfo() error {
 // newSignatureValue takes a copy of the signedInfo so that we can
 // modify the namespaces for canonicalization.
 func (s *Signature) buildSignatureValue() error {
-	// si.DSigNamespace = NamespaceDSig
-	// si.FeNamespace = NamespaceFACTURAE_NAMESPACE
-
 	data, err := xml.Marshal(s.SignedInfo)
 	if err != nil {
 		return err
@@ -473,110 +467,6 @@ func (s *Signature) buildSignatureValue() error {
 		Value: signatureValue,
 	}
 	return nil
-}
-
-func digest(doc interface{}, namespaces Namespaces) (string, error) {
-	data, err := xml.Marshal(doc)
-	if err != nil {
-		return "", err
-	}
-
-	return digestBytes(data, namespaces)
-}
-
-// canonicalize will take the data and attempt to combine the namespaces provided.
-// It doesn't do much more than that, as the golang xml lib already does most of the
-// work of creating standard XML.
-func canonicalize(data []byte, ns Namespaces) ([]byte, error) {
-	d := etree.NewDocument()
-	d.WriteSettings = etree.WriteSettings{
-		CanonicalEndTags: true,
-		CanonicalText:    true,
-		CanonicalAttrVal: true,
-	}
-	d.Indent(etree.NoIndent)
-	if err := d.ReadFromBytes(data); err != nil {
-		return nil, err
-	}
-
-	r := d.Root()
-
-	// Add any missing namespaces
-	for _, v := range ns.defs() {
-		match := false
-		for _, a := range r.Attr {
-			if a.Space == v.Space && a.Key == v.Key {
-				match = true
-			}
-		}
-		if !match {
-			r.Attr = append(r.Attr, v)
-		}
-	}
-	sort.Sort(byCanonicalAttr(r.Attr))
-
-	return d.WriteToBytes()
-}
-
-type byCanonicalAttr []etree.Attr
-
-func (a byCanonicalAttr) Len() int {
-	return len(a)
-}
-
-func (a byCanonicalAttr) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-func (a byCanonicalAttr) Less(i, j int) bool {
-	// we have two sets of attrs to sort, first those with the "xmlns" space,
-	// then everything else.
-
-	// First deal with default namespace which must always come first
-	if a[i].Key == XMLNS {
-		// Always first!
-		return true
-	}
-	if a[j].Key == XMLNS {
-		return false
-	}
-
-	// Next deal with the namespaces
-	if a[i].Space == XMLNS && (a[j].Space != XMLNS) {
-		return true
-	}
-	if a[j].Key == XMLNS || (a[i].Space != XMLNS && a[j].Space == XMLNS) {
-		return false
-	}
-
-	// Spaces are ordered by their values, not names! (seriously WTF!)
-	is := a[i].Space
-	js := a[j].Space
-	for _, v := range a {
-		if v.Space == XMLNS {
-			if v.Key == a[i].Space {
-				is = v.Value
-			}
-			if v.Key == a[j].Space {
-				js = v.Value
-			}
-		}
-	}
-
-	sp := strings.Compare(is, js)
-	if sp == 0 {
-		return strings.Compare(a[i].Key, a[j].Key) < 0
-	}
-	return sp < 0
-}
-
-func digestBytes(data []byte, ns Namespaces) (string, error) {
-	out, err := canonicalize(data, ns)
-	if err != nil {
-		return "", err
-	}
-	sum := sha512.Sum512(out)
-	return base64.StdEncoding.EncodeToString(sum[:]), nil
 }
 
 // UnsignedProperties contains ...
