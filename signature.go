@@ -219,6 +219,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	o := &options{
 		docID:      uuid.NewV1().String(),
 		namespaces: make(Namespaces),
+		timeNow:    currentTime,
 	}
 	for _, opt := range opts {
 		if err := opt(o); err != nil {
@@ -296,7 +297,7 @@ func (s *Signature) buildQualifyingProperties() error {
 		SignedProperties: &SignedProperties{
 			ID: fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
 			SignatureProperties: &SignedSignatureProperties{
-				SigningTime: time.Now().UTC().Format(ISO8601),
+				SigningTime: s.opts.timeNow().Format(ISO8601),
 				SigningCertificate: &SigningCertificate{
 					CertDigest: &Digest{
 						Method: &AlgorithmMethod{
@@ -472,4 +473,8 @@ func (s *Signature) buildSignatureValue() error {
 // UnsignedProperties contains ...
 type UnsignedProperties struct {
 	SignatureTimestamp *Timestamp `xml:"xades:UnsignedSignatureProperties>xades:SignatureTimestamp"`
+}
+
+func currentTime() time.Time {
+	return time.Now().UTC()
 }

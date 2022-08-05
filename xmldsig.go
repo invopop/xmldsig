@@ -2,6 +2,7 @@ package xmldsig
 
 import (
 	"errors"
+	"time"
 
 	"github.com/beevik/etree"
 )
@@ -18,6 +19,7 @@ type options struct {
 	timestampURL string
 	cert         *Certificate
 	xades        *XAdESConfig
+	timeNow      func() time.Time
 }
 
 // XAdESSignerRole defines the accepted signer roles
@@ -79,6 +81,16 @@ func WithXAdES(config *XAdESConfig) Option {
 func WithTimestamp(url string) Option {
 	return func(o *options) error {
 		o.timestampURL = url
+		return nil
+	}
+}
+
+// WithCurrentTime allows a callback to be provided in order to using a
+// different signing time method. This is especially useful for testing.
+// Default is to provide `time.Now().UTC()`.
+func WithCurrentTime(fn func() time.Time) Option {
+	return func(o *options) error {
+		o.timeNow = fn
 		return nil
 	}
 }

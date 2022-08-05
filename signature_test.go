@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/invopop/xmldsig"
 	"github.com/stretchr/testify/assert"
@@ -61,6 +62,23 @@ func TestSignature(t *testing.T) {
 		)
 		require.NoError(t, err)
 		assert.NotEmpty(t, getTimestamp(signature))
+	})
+
+	t.Run("should support setting a fixed signing time", func(t *testing.T) {
+		ts, err := time.Parse(time.RFC3339, "2022-08-05T13:51:00+02:00")
+		require.NoError(t, err)
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithDocID("test"),
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXAdES(xadesConfig()),
+			xmldsig.WithCurrentTime(func() time.Time {
+				return ts
+			}),
+		)
+		assert.Nil(t, err)
+		// This is mostly useful for getting back fixed results, so
+		// we can safely compare the final signature here.
+		assert.Contains(t, signature.Value.Value, "r1GyPRqPZN3LXZ7SKpENUtI7dSXA83aIlza7fG2c1XGnHOK4HNweEDifqg65owS6TYLn7eZtiUXMHN49CUnZ7YDo9O")
 	})
 }
 
