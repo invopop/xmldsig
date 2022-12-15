@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -82,25 +83,48 @@ func (cert *Certificate) Fingerprint() string {
 
 // ToPEM will return the public certificate encoded in base64 PEM
 // (without markers like "-----BEGIN CERTIFICATE-----")
-func (cert *Certificate) ToPEM() string {
-	return ToPEM(cert.certificate)
+func (cert *Certificate) NakedPEM() string {
+	return NakedPEM(cert.certificate)
 }
 
-// ToPEM converts a x509 formated certificate to the PEM format
-func ToPEM(cert *x509.Certificate) string {
+// PEM provides the PEM representation of the certificate.
+func (cert *Certificate) PEM() []byte {
+	return PEMCertificate(cert.certificate)
+}
+
+// PrivateKey provides the private key in PEM format.
+func (cert *Certificate) PrivateKey() []byte {
+	return PEMPrivateRSAKey(cert.privateKey)
+}
+
+// NakedPEM converts a x509 formated certificate to the PEM format without
+// the headers, useful for including in the XML document.
+func NakedPEM(cert *x509.Certificate) string {
+	replacer := strings.NewReplacer(
+		"-----BEGIN CERTIFICATE-----", "",
+		"-----END CERTIFICATE-----", "",
+		"\n", "")
+	pem := string(PEMCertificate(cert))
+	return replacer.Replace(pem)
+}
+
+// PEMCertificate provides the complete PEM version of the certificate.
+func PEMCertificate(cert *x509.Certificate) []byte {
 	pemBlock := pem.Block{
 		Type:    "CERTIFICATE",
 		Headers: map[string]string{},
 		Bytes:   cert.Raw,
 	}
+	return pem.EncodeToMemory(&pemBlock)
+}
 
-	pemString := string(pem.EncodeToMemory(&pemBlock))
-
-	replacer := strings.NewReplacer(
-		"-----BEGIN CERTIFICATE-----", "",
-		"-----END CERTIFICATE-----", "",
-		"\n", "")
-	return replacer.Replace(pemString)
+// PEMPrivateRSAKey issues a PEM string with the RSA Key.
+func PEMPrivateRSAKey(key *rsa.PrivateKey) []byte {
+	pb := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	}
+	return pem.EncodeToMemory(pb)
 }
 
 // Issuer returns a description of the certificate issuer
@@ -124,4 +148,22 @@ func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
 		Modulus:  base64.StdEncoding.EncodeToString(cert.privateKey.N.Bytes()),
 		Exponent: base64.StdEncoding.EncodeToString(exponentBytes),
 	}
+}
+
+// TLSConfig prepares TLS authentication connection details ready to use
+// with HTTP servers that require them in addition to the signatures of the
+// XML-DSig signed payload.
+func (cert *Certificate) TLSAuthConfig() (*tls.Config, error) {
+	pair, err := tls.X509KeyPair(cert.PEM(), cert.PrivateKey())
+	if err != nil {
+		return nil, err
+	}
+	rootCAs := x509.NewCertPool()
+	for _, c := range cert.CaChain {
+		rootCAs.AddCert(c)
+	}
+	return &tls.Config{
+		RootCAs:      rootCAs,
+		Certificates: []tls.Certificate{pair},
+	}, nil
 }

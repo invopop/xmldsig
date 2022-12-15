@@ -357,7 +357,7 @@ func (s *Signature) buildKeyInfo() error {
 		ID: fmt.Sprintf(certificateIDFormat, s.opts.docID),
 		X509Data: &X509Data{
 			X509Certificate: []string{
-				certificate.ToPEM(),
+				certificate.NakedPEM(),
 			},
 		},
 		KeyValue: &KeyValue{
@@ -367,7 +367,7 @@ func (s *Signature) buildKeyInfo() error {
 	}
 
 	for _, ca := range certificate.CaChain {
-		info.X509Data.X509Certificate = append(info.X509Data.X509Certificate, ToPEM(ca))
+		info.X509Data.X509Certificate = append(info.X509Data.X509Certificate, NakedPEM(ca))
 	}
 
 	s.KeyInfo = info
