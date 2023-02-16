@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -104,7 +103,7 @@ func requestTimestamp(serviceURL string, data io.Reader) (string, error) {
 		return "", fmt.Errorf("timestamp response error: %v", response.Status)
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return "", fmt.Errorf("reading response body: %w", err)
 	}
