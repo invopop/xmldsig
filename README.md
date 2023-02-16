@@ -1,12 +1,16 @@
 # XML DSig
 
-For signing XML documents.
+Partial implementation of the XML DSig standard for Go. Can be used to manage certificates in .p12 format and generate signatures typically used with UBL invoice documents or similar local standards.
 
-This project is the result of extracting the Signature and Certificate manipulation code from the FacturaE project. As such, it's currently optimised for that use-case.
+[![Lint](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml)
+[![Test Go](https://github.com/invopop/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/test.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/invopop/xmldsig)](https://goreportcard.com/report/github.com/invopop/xmldsig)
+[![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
+![Latest Tag](https://img.shields.io/github/v/tag/invopop/xmldsig)
 
 ## NOTES
 
-- Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the structs you intent to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
+- Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the Go structures (`type struct`) you intend to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
 
 ## Usage Example
 
@@ -47,6 +51,12 @@ func main() {
 }
 ```
 
+Support is also included for using a Time Stamp Authority (TSA). Simply add the following to the `Sign` options with the URL of the service you want to use:
+
+```go
+xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA) // uses https://freetsa.org/tsr
+```
+
 ## Certificates
 
 Signing and certificates can be overwhelming. OpenSSL is the tool to use for clarifying what the situation is and this page has a useful set of commands: https://www.sslshopper.com/article-most-common-openssl-commands.html
@@ -70,3 +80,9 @@ Split the resulting `.pem` file into multiple parts for the key, certificate, an
 ```
 openssl pkcs12 -export -out invopop.p12 -inkey invopop.key -in invopop.crt -certfile invopop.ca
 ```
+
+## Copyright
+
+This project is developed and maintained under the Apache 2.0 Open Source license by [Invopop](https://invopop.com).
+
+Copyright 2021-2023 Invopop Ltd.
