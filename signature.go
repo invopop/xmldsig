@@ -337,6 +337,10 @@ func (s *Signature) buildQualifyingProperties() error {
 
 func (s *Signature) xadesPolicyIdentifier() *PolicyIdentifier {
 	policy := s.opts.xades.Policy
+	if policy == nil {
+		return nil
+	}
+
 	return &PolicyIdentifier{
 		SigPolicyID: &SigPolicyID{
 			Identifier:  policy.URL,
