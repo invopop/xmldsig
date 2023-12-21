@@ -311,9 +311,6 @@ func (s *Signature) buildQualifyingProperties() error {
 					},
 				},
 				PolicyIdentifier: s.xadesPolicyIdentifier(),
-				SignerRole: &SignerRole{
-					ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xades.Role.String()}},
-				},
 			},
 			DataObjectProperties: &DataObjectFormat{
 				ObjectReference: "#" + s.referenceID,
@@ -329,6 +326,13 @@ func (s *Signature) buildQualifyingProperties() error {
 			},
 		},
 	}
+
+	if s.opts.xades.Role != "" {
+		qp.SignedProperties.SignatureProperties.SignerRole = &SignerRole{
+			ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xades.Role.String()}},
+		}
+	}
+
 	s.Object = &Object{
 		QualifyingProperties: qp,
 	}
