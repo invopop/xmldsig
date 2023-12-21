@@ -80,11 +80,34 @@ func TestSignature(t *testing.T) {
 		// we can safely compare the final signature here.
 		assert.Contains(t, signature.Value.Value, "r1GyPRqPZN3LXZ7SKpENUtI7dSXA83aIlza7fG2c1XGnHOK4HNweEDifqg65owS6TYLn7eZtiUXMHN49CUnZ7YDo9O")
 	})
+
+	t.Run("should not set a signer role when not provided", func(t *testing.T) {
+		xades := xadesConfig()
+		xades.Role = ""
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXAdES(xades),
+		)
+		assert.Nil(t, err)
+		assert.Nil(t, signature.Object.QualifyingProperties.SignedProperties.SignatureProperties.SignerRole)
+	})
+
+	t.Run("should set a signer role when provided", func(t *testing.T) {
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXAdES(xadesConfig()),
+		)
+		assert.Nil(t, err)
+		assert.Equal(t,
+			"third party",
+			signature.Object.QualifyingProperties.SignedProperties.
+				SignatureProperties.SignerRole.ClaimedRoles.ClaimedRole[0])
+	})
 }
 
 func xadesConfig() *xmldsig.XAdESConfig {
 	return &xmldsig.XAdESConfig{
-		Role:        xmldsig.XAdESThirdParty,
+		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
 			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
