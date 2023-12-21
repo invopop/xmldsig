@@ -84,7 +84,7 @@ func TestSignature(t *testing.T) {
 
 func xadesConfig() *xmldsig.XAdESConfig {
 	return &xmldsig.XAdESConfig{
-		Role:        xmldsig.XAdESThirdParty,
+		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
 			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",

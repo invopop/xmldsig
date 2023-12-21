@@ -25,13 +25,6 @@ type options struct {
 // XAdESSignerRole defines the accepted signer roles
 type XAdESSignerRole string
 
-// Pre-defined XAdES Signer Roles
-const (
-	XAdESSupplier   XAdESSignerRole = "supplier"
-	XAdESCustomer   XAdESSignerRole = "customer"
-	XAdESThirdParty XAdESSignerRole = "third party"
-)
-
 // XAdESConfig defines what is expected for the configuration.
 type XAdESConfig struct {
 	Role        XAdESSignerRole    `json:"role"`
