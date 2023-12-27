@@ -6,6 +6,8 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
@@ -25,6 +27,7 @@ type Certificate struct {
 	privateKey  *rsa.PrivateKey
 	certificate *x509.Certificate
 	CaChain     []*x509.Certificate
+	issuer      *pkix.RDNSequence
 }
 
 // PrivateKeyInfo contains info about modulus and exponent of the key
@@ -46,11 +49,18 @@ func LoadCertificate(path, password string) (*Certificate, error) {
 		return nil, err
 	}
 
+	issuer := &pkix.RDNSequence{}
+	_, err = asn1.Unmarshal(certificate.RawIssuer, issuer)
+	if err != nil {
+		return nil, err
+	}
+
 	rsaPrivateKey := privateKey.(*rsa.PrivateKey)
 	return &Certificate{
 		privateKey:  rsaPrivateKey,
 		certificate: certificate,
 		CaChain:     caChain,
+		issuer:      issuer,
 	}, nil
 }
 
@@ -129,7 +139,7 @@ func PEMPrivateRSAKey(key *rsa.PrivateKey) []byte {
 
 // Issuer returns a description of the certificate issuer
 func (cert *Certificate) Issuer() string {
-	return cert.certificate.Issuer.String()
+	return cert.issuer.String()
 }
 
 // SerialNumber returns the serial number of the certificate
