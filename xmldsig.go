@@ -1,3 +1,4 @@
+// Package xmldsig helps generate XML files with digital signatures.
 package xmldsig
 
 import (

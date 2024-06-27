@@ -217,7 +217,7 @@ const (
 
 func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	o := &options{
-		docID:      uuid.NewV1().String(),
+		docID:      uuid.V1().String(),
 		namespaces: make(Namespaces),
 		timeNow:    currentTime,
 	}
@@ -243,14 +243,10 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	}
 
 	if o.xades != nil {
-		if err := s.buildQualifyingProperties(); err != nil {
-			return nil, fmt.Errorf("qualifying properties: %w", err)
-		}
+		s.buildQualifyingProperties()
 	}
 
-	if err := s.buildKeyInfo(); err != nil {
-		return nil, fmt.Errorf("key info: %w", err)
-	}
+	s.buildKeyInfo()
 
 	if err := s.buildSignedInfo(); err != nil {
 		return nil, fmt.Errorf("signed info: %w", err)
@@ -288,7 +284,7 @@ func addRootNamespaces(ns Namespaces, data []byte) error {
 }
 
 // buildQualifyingProperties is used for the XAdES policy configuration.
-func (s *Signature) buildQualifyingProperties() error {
+func (s *Signature) buildQualifyingProperties() {
 	cert := s.opts.cert
 	qp := &QualifyingProperties{
 		XAdESNamespace: NamespaceXAdES,
@@ -336,7 +332,6 @@ func (s *Signature) buildQualifyingProperties() error {
 	s.Object = &Object{
 		QualifyingProperties: qp,
 	}
-	return nil
 }
 
 func (s *Signature) xadesPolicyIdentifier() *PolicyIdentifier {
@@ -359,7 +354,7 @@ func (s *Signature) xadesPolicyIdentifier() *PolicyIdentifier {
 	}
 }
 
-func (s *Signature) buildKeyInfo() error {
+func (s *Signature) buildKeyInfo() {
 	certificate := s.opts.cert
 	info := &KeyInfo{
 		ID: fmt.Sprintf(certificateIDFormat, s.opts.docID),
@@ -379,8 +374,6 @@ func (s *Signature) buildKeyInfo() error {
 	}
 
 	s.KeyInfo = info
-
-	return nil
 }
 
 // buildSignedInfo will add namespaces to the original properties
