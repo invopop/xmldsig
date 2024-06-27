@@ -36,7 +36,7 @@ type PrivateKeyInfo struct {
 	Exponent string
 }
 
-// Load creates a new Certificate from the info
+// LoadCertificate creates a new Certificate instance from the info
 // obtained from pkcs12 formated data stream
 func LoadCertificate(path, password string) (*Certificate, error) {
 	data, err := os.ReadFile(path)
@@ -91,7 +91,7 @@ func (cert *Certificate) Fingerprint() string {
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
-// ToPEM will return the public certificate encoded in base64 PEM
+// NakedPEM will return the public certificate encoded in base64 PEM
 // (without markers like "-----BEGIN CERTIFICATE-----")
 func (cert *Certificate) NakedPEM() string {
 	return NakedPEM(cert.certificate)
@@ -160,7 +160,7 @@ func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
 	}
 }
 
-// TLSConfig prepares TLS authentication connection details ready to use
+// TLSAuthConfig prepares TLS authentication connection details ready to use
 // with HTTP servers that require them in addition to the signatures of the
 // XML-DSig signed payload.
 func (cert *Certificate) TLSAuthConfig() (*tls.Config, error) {
