@@ -25,9 +25,8 @@ const (
 
 // Algorithms
 const (
-	AlgDSigSHA1      = "http://www.w3.org/2000/09/xmldsig#sha1"
-	AlgDSigRSASHA1   = "http://www.w3.org/2000/09/xmldsig#rsa-sha1"
 	AlgDSigRSASHA256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+	AlgDSigRSASHA512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
 )
 
 // ISO8601 contains the time format used for signing times
@@ -393,13 +392,17 @@ func (s *Signature) buildKeyInfo() {
 // buildSignedInfo will add namespaces to the original properties
 // as part of canonicalization, so we expect copies here.
 func (s *Signature) buildSignedInfo() error {
+	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xadesOptions.SignedInfoHash)
+	if err != nil {
+		return fmt.Errorf("signature method: %w", err)
+	}
+
 	si := &SignedInfo{
 		CanonicalizationMethod: &AlgorithmMethod{
 			Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
 		},
 		SignatureMethod: &AlgorithmMethod{
-			Algorithm: AlgDSigRSASHA256,
-			//Algorithm: AlgDSigRSASHA1,
+			Algorithm: signatureMethodAlgorithm,
 		},
 		Reference: []*Reference{},
 	}
@@ -490,9 +493,9 @@ func (s *Signature) buildSignatureValue() error {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]))
+	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xadesOptions.SignedInfoHash)
 	if err != nil {
-		return err
+		return fmt.Errorf("sign SignedInfo: %w", err)
 	}
 
 	s.Value = &Value{

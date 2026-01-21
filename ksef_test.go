@@ -85,9 +85,6 @@ func TestWithKSeFOptions(t *testing.T) {
 	if opts.SignedInfoHash != crypto.SHA256 {
 		t.Fatalf("unexpected SignedInfoHash: %v", opts.SignedInfoHash)
 	}
-	if opts.SignedInfoSignatureAlgorithm != SignedInfoSignatureAlgorithmRSA {
-		t.Fatalf("unexpected SignedInfoSignatureAlgorithm: %s", opts.SignedInfoSignatureAlgorithm)
-	}
 }
 
 func TestKsefIssuerSerializerFormatsAttributes(t *testing.T) {

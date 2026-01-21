@@ -64,24 +64,27 @@ func LoadCertificate(path, password string) (*Certificate, error) {
 	}, nil
 }
 
-// Sign will first create a hash of the data passed and then
-// create a string (base64) representation of the signature obtained
-// using the private key of the certificate
-func (cert *Certificate) Sign(data string) (string, error) {
-	hash := makeHash(data)
+// Sign hashes the provided data with the requested hash algorithm and signs the
+// digest using the configured RSA private key.
+func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
+	if hash == 0 {
+		hash = crypto.SHA256
+	}
+	if !hash.Available() {
+		return "", fmt.Errorf("hash %v not available", hash)
+	}
 
-	signature, signingErr := rsa.SignPKCS1v15(rand.Reader, cert.privateKey, crypto.SHA256, hash)
+	hasher := hash.New()
+	if _, err := hasher.Write([]byte(data)); err != nil {
+		return "", err
+	}
+	digest := hasher.Sum(nil)
+
+	signature, signingErr := rsa.SignPKCS1v15(rand.Reader, cert.privateKey, hash, digest)
 	if signingErr != nil {
 		return "", signingErr
 	}
-
 	return base64.StdEncoding.EncodeToString(signature), nil
-}
-
-func makeHash(data string) []byte {
-	hasher := crypto.SHA256.New()
-	hasher.Write([]byte(data))
-	return hasher.Sum(nil)
 }
 
 // Fingerprint returns the requested hash of the certificate bytes.

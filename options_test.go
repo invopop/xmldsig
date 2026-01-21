@@ -36,16 +36,12 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 	if opts.SignedInfoHash != crypto.SHA256 {
 		t.Fatalf("expected SignedInfoHash to default to SHA256, got %v", opts.SignedInfoHash)
 	}
-	if opts.SignedInfoSignatureAlgorithm != SignedInfoSignatureAlgorithmRSA {
-		t.Fatalf("expected SignedInfoSignatureAlgorithm to default to RSA, got %s", opts.SignedInfoSignatureAlgorithm)
-	}
 }
 
 func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
 	custom := &XAdESOptions{
-		DataHash:                     crypto.SHA384,
-		SignedInfoHash:               crypto.SHA384,
-		SignedInfoSignatureAlgorithm: SignedInfoSignatureAlgorithmECDSA,
+		DataHash:       crypto.SHA384,
+		SignedInfoHash: crypto.SHA384,
 	}
 
 	opts := normalizeXAdESOptions(custom)
@@ -55,9 +51,6 @@ func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
 	}
 	if opts.SignedInfoHash != crypto.SHA384 {
 		t.Fatalf("expected SignedInfoHash to remain SHA384, got %v", opts.SignedInfoHash)
-	}
-	if opts.SignedInfoSignatureAlgorithm != SignedInfoSignatureAlgorithmECDSA {
-		t.Fatalf("expected SignedInfoSignatureAlgorithm to remain ECDSA, got %s", opts.SignedInfoSignatureAlgorithm)
 	}
 }
 

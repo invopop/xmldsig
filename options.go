@@ -9,14 +9,6 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// SignedInfoSignatureAlgorithm determines how SignedInfo is signed.
-type SignedInfoSignatureAlgorithm string
-
-const (
-	SignedInfoSignatureAlgorithmRSA   SignedInfoSignatureAlgorithm = "RSA"
-	SignedInfoSignatureAlgorithmECDSA SignedInfoSignatureAlgorithm = "ECDSA"
-)
-
 // XAdESOptions allows low-level control over how hashes and canonicalization
 // are performed when generating extended signatures.
 type XAdESOptions struct {
@@ -32,7 +24,6 @@ type XAdESOptions struct {
 	KeyInfoHash                             crypto.Hash
 	SignedInfoCanonicalizer                 func([]byte, Namespaces) ([]byte, error)
 	SignedInfoHash                          crypto.Hash
-	SignedInfoSignatureAlgorithm            SignedInfoSignatureAlgorithm
 }
 
 // normalizeXAdESOptions fills missing values with defaults.
@@ -62,10 +53,6 @@ func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
 	if opts.SignedInfoHash == 0 {
 		opts.SignedInfoHash = crypto.SHA256
 	}
-	if opts.SignedInfoSignatureAlgorithm == "" {
-		opts.SignedInfoSignatureAlgorithm = SignedInfoSignatureAlgorithmRSA
-	}
-
 	return opts
 }
 
