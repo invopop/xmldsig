@@ -20,6 +20,7 @@ type options struct {
 	timestampURL string
 	cert         *Certificate
 	xades        *XAdESConfig
+	xadesOptions XAdESOptions
 	timeNow      func() time.Time
 }
 
@@ -44,6 +45,14 @@ func WithDocID(id string) Option {
 func WithTimestamp(url string) Option {
 	return func(o *options) error {
 		o.timestampURL = url
+		return nil
+	}
+}
+
+// WithRawOptions allows callers to control the low-level XAdES behavior directly.
+func WithRawOptions(opts XAdESOptions) Option {
+	return func(o *options) error {
+		o.xadesOptions = opts
 		return nil
 	}
 }

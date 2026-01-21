@@ -7,6 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/beevik/etree v1.5.1
 	github.com/invopop/gobl v0.218.0
+	github.com/russellhaering/goxmldsig v1.5.0
 	github.com/stretchr/testify v1.10.0
 	software.sslmate.com/src/go-pkcs12 v0.5.0
 )
@@ -18,6 +19,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/invopop/validation v0.8.0 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

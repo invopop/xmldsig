@@ -1,5 +1,11 @@
 package xmldsig
 
+import (
+	"crypto"
+	"crypto/x509/pkix"
+	"time"
+)
+
 // XAdESSignerRole defines the accepted signer roles for FacturaE.
 type XAdESSignerRole string
 
@@ -35,6 +41,33 @@ func WithFacturaE(config *FacturaEConfig) Option {
 func WithXAdES(config *XAdESConfig) Option {
 	return func(o *options) error {
 		o.xades = config
+		o.xadesOptions = facturaeXAdESOptions()
 		return nil
 	}
+}
+
+func facturaeXAdESOptions() XAdESOptions {
+	return XAdESOptions{
+		DataCanonicalizer:                       nil,
+		DataHash:                                crypto.SHA256,
+		TimestampFormatter:                      facturaeTimestampFormatter,
+		IssuerSerializer:                        facturaeIssuerSerializer,
+		SignedSignaturePropertiesCustomElements: nil, // TODO implement
+		SignedPropertiesCustomElements:          nil, // TODO implement
+		SignedPropertiesCanonicalizer:           nil,
+		CertificateHash:                         crypto.SHA256,
+		SignedPropertiesHash:                    crypto.SHA256,
+		KeyInfoHash:                             0,
+		SignedInfoCanonicalizer:                 canonicalize,
+		SignedInfoHash:                          crypto.SHA256,
+		SignedInfoSignatureAlgorithm:            SignedInfoSignatureAlgorithmRSA,
+	}
+}
+
+func facturaeTimestampFormatter(t time.Time) string {
+	return t.Format("2006-01-02T15:04:05-07:00")
+}
+
+func facturaeIssuerSerializer(seq pkix.RDNSequence) string {
+	return seq.String()
 }
