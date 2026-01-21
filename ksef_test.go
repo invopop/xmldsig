@@ -3,11 +3,14 @@ package xmldsig
 import (
 	"crypto"
 	"crypto/x509/pkix"
+	"encoding/asn1"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	dsig "github.com/russellhaering/goxmldsig"
+	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
 func TestWithKSeFOptions(t *testing.T) {
@@ -115,5 +118,28 @@ func TestKsefIssuerSerializerHandlesMissingValues(t *testing.T) {
 	want := "G=, SN=, SERIALNUMBER=, CN=, C="
 	if got != want {
 		t.Fatalf("unexpected issuer serialization for empty name:\nwant %q\n got %q", want, got)
+	}
+}
+
+func TestKsefIssuerSerializerMatchesCertificate(t *testing.T) {
+	data, err := os.ReadFile("certs/cert-20260102-131809.pfx")
+	if err != nil {
+		t.Fatalf("failed to read certificate: %v", err)
+	}
+
+	_, certificate, _, err := pkcs12.DecodeChain(data, "")
+	if err != nil {
+		t.Fatalf("failed to decode certificate: %v", err)
+	}
+
+	var seq pkix.RDNSequence
+	if _, err := asn1.Unmarshal(certificate.RawSubject, &seq); err != nil {
+		t.Fatalf("failed to parse certificate subject: %v", err)
+	}
+
+	got := ksefIssuerSerializer(seq)
+	want := "G=A, SN=R, SERIALNUMBER=TINPL-1192154885, CN=A R, C=PL"
+	if got != want {
+		t.Fatalf("unexpected issuer serialization from certificate:\nwant %q\n got %q", want, got)
 	}
 }
