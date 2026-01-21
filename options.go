@@ -42,7 +42,7 @@ func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
 	}
 
 	if opts.DataHash == 0 {
-		opts.DataHash = crypto.SHA256
+		opts.DataHash = crypto.SHA512
 	}
 	if opts.TimestampFormatter == nil {
 		opts.TimestampFormatter = defaultTimestampFormatter

@@ -12,8 +12,8 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 		t.Fatal("expected normalizeXAdESOptions to return non-nil options")
 	}
 
-	if opts.DataHash != crypto.SHA256 {
-		t.Fatalf("expected DataHash to default to SHA256, got %v", opts.DataHash)
+	if opts.DataHash != crypto.SHA512 {
+		t.Fatalf("expected DataHash to default to SHA512, got %v", opts.DataHash)
 	}
 	if opts.TimestampFormatter == nil {
 		t.Fatal("expected TimestampFormatter to be set")
