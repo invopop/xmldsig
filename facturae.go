@@ -4,6 +4,8 @@ import (
 	"crypto"
 	"crypto/x509/pkix"
 	"time"
+
+	"github.com/beevik/etree"
 )
 
 // XAdESSignerRole defines the accepted signer roles for FacturaE.
@@ -41,19 +43,19 @@ func WithXAdES(config *XAdESConfig) Option {
 func WithFacturaE(config *FacturaEConfig) Option {
 	return func(o *options) error {
 		o.xades = config
-		o.xadesOptions = facturaeXAdESOptions()
+		o.xadesOptions = facturaeXAdESOptions(config)
 		return nil
 	}
 }
 
-func facturaeXAdESOptions() XAdESOptions {
+func facturaeXAdESOptions(config *FacturaEConfig) XAdESOptions {
 	return XAdESOptions{
 		DataCanonicalizer:                       nil,
 		DataHash:                                crypto.SHA256,
 		TimestampFormatter:                      facturaeTimestampFormatter,
 		IssuerSerializer:                        facturaeIssuerSerializer,
-		SignedSignaturePropertiesCustomElements: nil, // TODO implement
-		SignedPropertiesCustomElements:          nil, // TODO implement
+		SignedSignaturePropertiesCustomElements: facturaeSignedSignaturePropertiesCustomElements(config),
+		SignedPropertiesCustomElements:          facturaeSignedPropertiesCustomElements(config),
 		SignedPropertiesCanonicalizer:           nil,
 		CertificateHash:                         crypto.SHA256,
 		SignedPropertiesHash:                    crypto.SHA256,
@@ -70,4 +72,74 @@ func facturaeTimestampFormatter(t time.Time) string {
 
 func facturaeIssuerSerializer(seq pkix.RDNSequence) string {
 	return seq.String()
+}
+
+func facturaeSignedSignaturePropertiesCustomElements(config *FacturaEConfig) *[]*etree.Element {
+	if config == nil {
+		return nil
+	}
+
+	var elements []*etree.Element
+
+	if el := facturaeSignaturePolicyIdentifierElement(config.Policy); el != nil {
+		elements = append(elements, el)
+	}
+
+	if config.Role != "" {
+		elements = append(elements, facturaeSignerRoleElement(config.Role))
+	}
+
+	if len(elements) == 0 {
+		return nil
+	}
+
+	return &elements
+}
+
+func facturaeSignaturePolicyIdentifierElement(policy *XAdESPolicyConfig) *etree.Element {
+	if policy == nil {
+		return nil
+	}
+
+	root := etree.NewElement("xades:SignaturePolicyIdentifier")
+	signaturePolicyID := root.CreateElement("xades:SignaturePolicyId")
+
+	sigPolicyID := signaturePolicyID.CreateElement("xades:SigPolicyId")
+	sigPolicyID.CreateElement("xades:Identifier").SetText(policy.URL)
+	sigPolicyID.CreateElement("xades:Description").SetText(policy.Description)
+
+	sigPolicyHash := signaturePolicyID.CreateElement("xades:SigPolicyHash")
+	digestMethod := sigPolicyHash.CreateElement("ds:DigestMethod")
+	digestMethod.CreateAttr("Algorithm", policy.Algorithm)
+	sigPolicyHash.CreateElement("ds:DigestValue").SetText(policy.Hash)
+
+	return root
+}
+
+func facturaeSignerRoleElement(role XAdESSignerRole) *etree.Element {
+	roleElement := etree.NewElement("xades:SignerRole")
+	claimedRoles := roleElement.CreateElement("xades:ClaimedRoles")
+	claimedRoles.CreateElement("xades:ClaimedRole").SetText(role.String())
+	return roleElement
+}
+
+func facturaeSignedPropertiesCustomElements(config *FacturaEConfig) *[]*etree.Element {
+	if config == nil {
+		return nil
+	}
+
+	dataObjectFormat := etree.NewElement("xades:DataObjectFormat")
+	// The reference is filled when QualifyingProperties are assembled.
+	dataObjectFormat.CreateAttr("ObjectReference", "")
+	dataObjectFormat.CreateElement("xades:Description").SetText(config.Description)
+
+	objectIdentifier := dataObjectFormat.CreateElement("xades:ObjectIdentifier")
+	identifier := objectIdentifier.CreateElement("xades:Identifier")
+	identifier.CreateAttr("Qualifier", "OIDAsURN")
+	identifier.SetText("urn:oid:1.2.840.10003.5.109.10")
+
+	dataObjectFormat.CreateElement("xades:MimeType").SetText("text/xml")
+
+	elements := []*etree.Element{dataObjectFormat}
+	return &elements
 }

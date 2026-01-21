@@ -13,6 +13,13 @@ Partial implementation of the XML DSig standard for Go. Can be used to manage ce
 - Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the Go structures (`type struct`) you intend to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
 - Type `xmldsig.XAdESConfig` and method `xmldsig.WithXAdES` are renamed, as they were accepting options specific to Spanish FacturaE, not general API-independent options.
 
+## Predefined settings
+
+- `xmldsig.WithFacturaE` - Spanish FacturaE
+- `xmldsig.WithKSeF` - Polish KSeF
+
+For other standards, provide appropriate settings using the generic `xmldsig.WithRawOptions` method.
+
 ## Usage Example
 
 ```go
