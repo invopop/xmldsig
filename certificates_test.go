@@ -1,6 +1,7 @@
 package xmldsig_test
 
 import (
+	"crypto"
 	"testing"
 
 	"github.com/invopop/xmldsig"
@@ -28,7 +29,8 @@ func TestCertificateLoader(t *testing.T) {
 	})
 
 	t.Run("should return the certificate fingerprint", func(t *testing.T) {
-		fingerprint := certificate.Fingerprint()
+		fingerprint, err := certificate.Fingerprint(crypto.SHA512)
+		require.NoError(t, err)
 		assert.Equal(t, "VmNYwDiCBBXJX/IL1AUYj7uHouM2Jcp3ZkeqmB+FKGTTwXIIZnCWmZVhCSB7uNoV6Xee7nZVkMqeCMQk3tGR0g==", fingerprint)
 	})
 

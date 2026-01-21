@@ -32,7 +32,7 @@ func ksefXAdESOptions() XAdESOptions {
 		SignedPropertiesCanonicalizer:           dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),
 		CertificateHash:                         crypto.SHA256,
 		SignedPropertiesHash:                    crypto.SHA256,
-		KeyInfoHash:                             nil,
+		KeyInfoHash:                             0,
 		SignedInfoCanonicalizer:                 ksefSignedInfoCanonicalizer,
 		SignedInfoHash:                          crypto.SHA256,
 		SignedInfoSignatureAlgorithm:            SignedInfoSignatureAlgorithmRSA,

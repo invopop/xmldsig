@@ -84,11 +84,19 @@ func makeHash(data string) []byte {
 	return hasher.Sum(nil)
 }
 
-// Fingerprint will return the SHA512 hash of the public key
-func (cert *Certificate) Fingerprint() string {
-	hasher := crypto.SHA512.New()
-	hasher.Write(cert.certificate.Raw)
-	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
+// Fingerprint returns the requested hash of the certificate bytes.
+func (cert *Certificate) Fingerprint(hash crypto.Hash) (string, error) {
+	if hash == 0 {
+		hash = crypto.SHA512
+	}
+	if !hash.Available() {
+		return "", fmt.Errorf("hash %v not available", hash)
+	}
+	hasher := hash.New()
+	if _, err := hasher.Write(cert.certificate.Raw); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
 
 // NakedPEM will return the public certificate encoded in base64 PEM

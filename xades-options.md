@@ -13,7 +13,7 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | `SignedPropertiesCanonicalizer` | `*dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` | `nil` | `nil` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
 | `CertificateHash` | `crypto.Hash` | Hash algorithm on the certificate | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA256` |
 | `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA256` |
-| `KeyInfoHash` | `*crypto.Hash` | Hash algorithm used on `KeyInfo`, or nil to disable adding `KeyInfo` to `SignedInfo` > `Reference` | `nil` | `crypto.SHA512` | `nil` |
+| `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`; zero disables adding `KeyInfo` to `SignedInfo` > `Reference` | `0` | `crypto.SHA512` | `0` |
 | `SignedInfoCanonicalizer` | `*dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | `canonicalize` from `c14n.go` | `canonicalize` from `c14n.go` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
 | `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | `crypto.SHA256` | `crypto.SHA256` | `crypto.SHA256` |
 | `SignedInfoSignatureAlgorithm` | `string` | Signature algorithm used on `SignedInfo` | `RSA` | `RSA` | `RSA` |

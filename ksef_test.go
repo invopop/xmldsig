@@ -68,8 +68,8 @@ func TestWithKSeFOptions(t *testing.T) {
 	if opts.SignedPropertiesHash != crypto.SHA256 {
 		t.Fatalf("unexpected SignedPropertiesHash: %v", opts.SignedPropertiesHash)
 	}
-	if opts.KeyInfoHash != nil {
-		t.Fatalf("expected KeyInfoHash to be nil, got %v", *opts.KeyInfoHash)
+	if opts.KeyInfoHash != 0 {
+		t.Fatalf("expected KeyInfoHash to be zero, got %v", opts.KeyInfoHash)
 	}
 
 	if opts.SignedInfoCanonicalizer == nil {
