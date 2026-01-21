@@ -23,7 +23,7 @@ type SampleDoc struct {
 }
 
 func main() {
-    doc := &SampleDoc{
+	doc := &SampleDoc{
 		TestNamespace: "http://invopop.com/xml/test",
 		Title:         "This is a test",
 	}
@@ -38,16 +38,16 @@ func main() {
 			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
 		},
 	}
-    data, _ := xml.Marshal(doc)
-    cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
-    doc.Signature, _ = xmldsig.Sign(data,
+	data, _ := xml.Marshal(doc)
+	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
+	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
 		xmldsig.WithXAdES(xades),
 	)
 
-    // Now output the data
-    out, _ := xml.Marshal(doc)
-    fmt.Println(string(out))
+	// Now output the data
+	out, _ := xml.Marshal(doc)
+	fmt.Println(string(out))
 }
 ```
 
