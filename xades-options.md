@@ -11,9 +11,9 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | `SignedSignaturePropertiesCustomElements` | `*[]etree `| Custom elements to include in `SignedSignatureProperties` | `nil` | see below | `nil` |
 | `SignedPropertiesCustomElements` | `*[]etree` | Custom elements to include in `SignedProperties` | `nil` | see below | `nil` |
 | `SignedPropertiesCanonicalizer` | `*dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` | `nil` | `nil` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
-| `CertificateHash` | `crypto.Hash` | Hash algorithm on the certificate | `crypto.SHA512` | `crypto.SHA256` | `crypto.SHA512` |
-| `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` | `crypto.SHA512` | `crypto.SHA256 `| `crypto.SHA512` |
-| `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`, or nil to disable adding `KeyInfo` to `SignedInfo` > `Reference` | `nil` | `nil` | `crypto.SHA512` |
+| `CertificateHash` | `crypto.Hash` | Hash algorithm on the certificate | `crypto.SHA512` | `crypto.SHA256` | `crypto.SHA256` |
+| `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` | `crypto.SHA512` | `crypto.SHA256 `| `crypto.SHA256` |
+| `KeyInfoHash` | `*crypto.Hash` | Hash algorithm used on `KeyInfo`, or nil to disable adding `KeyInfo` to `SignedInfo` > `Reference` | `nil` | `crypto.SHA512` | `nil` |
 | `SignedInfoCanonicalizer` | `*dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | `canonicalize` from `c14n.go` | `canonicalize` from `c14n.go` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
 | `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | `crypto.SHA256` | `crypto.SHA256` | `crypto.SHA256` |
 | `SignedInfoSignatureAlgorithm` | `string` | Signature algorithm used on `SignedInfo` | `RSA` | `RSA` | `RSA` |

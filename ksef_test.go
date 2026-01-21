@@ -62,14 +62,14 @@ func TestWithKSeFOptions(t *testing.T) {
 		t.Fatalf("unexpected SignedPropertiesCanonicalizer algorithm: %s", opts.SignedPropertiesCanonicalizer.Algorithm())
 	}
 
-	if opts.CertificateHash != crypto.SHA512 {
+	if opts.CertificateHash != crypto.SHA256 {
 		t.Fatalf("unexpected CertificateHash: %v", opts.CertificateHash)
 	}
-	if opts.SignedPropertiesHash != crypto.SHA512 {
+	if opts.SignedPropertiesHash != crypto.SHA256 {
 		t.Fatalf("unexpected SignedPropertiesHash: %v", opts.SignedPropertiesHash)
 	}
-	if opts.KeyInfoHash != crypto.SHA512 {
-		t.Fatalf("unexpected KeyInfoHash: %v", opts.KeyInfoHash)
+	if opts.KeyInfoHash != nil {
+		t.Fatalf("expected KeyInfoHash to be nil, got %v", *opts.KeyInfoHash)
 	}
 
 	if opts.SignedInfoCanonicalizer == nil {

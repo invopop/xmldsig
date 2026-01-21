@@ -29,7 +29,7 @@ type XAdESOptions struct {
 	SignedPropertiesCanonicalizer           dsig.Canonicalizer
 	CertificateHash                         crypto.Hash
 	SignedPropertiesHash                    crypto.Hash
-	KeyInfoHash                             crypto.Hash
+	KeyInfoHash                             *crypto.Hash
 	SignedInfoCanonicalizer                 func([]byte, Namespaces) ([]byte, error)
 	SignedInfoHash                          crypto.Hash
 	SignedInfoSignatureAlgorithm            SignedInfoSignatureAlgorithm
@@ -77,4 +77,11 @@ func defaultIssuerSerializer(seq pkix.RDNSequence) string {
 	var name pkix.Name
 	name.FillFromRDNSequence(&seq)
 	return name.String()
+}
+
+// hashPtr returns a pointer to the given hash algorithm - helper is needed because simply passing &crypto.SHA512
+// doesn't work due to type constraints.
+func hashPtr(h crypto.Hash) *crypto.Hash {
+	v := h
+	return &v
 }
