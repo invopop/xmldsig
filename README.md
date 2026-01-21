@@ -11,6 +11,7 @@ Partial implementation of the XML DSig standard for Go. Can be used to manage ce
 ## NOTES
 
 - Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the Go structures (`type struct`) you intend to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
+- Type `xmldsig.XAdESConfig` and method `xmldsig.WithXAdES` are renamed, as they were accepting options specific to Spanish FacturaE, not general API-independent options.
 
 ## Usage Example
 
@@ -28,10 +29,10 @@ func main() {
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	xades := &xmldsig.XAdESConfig{
+	xades := &xmldsig.FacturaeConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
-		Policy: &xmldsig.XAdESPolicyConfig{
+		Policy: &xmldsig.FacturaePolicyConfig{
 			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
 			Description: "Política de Firma FacturaE v3.1",
 			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
@@ -42,7 +43,7 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXAdES(xades),
+		xmldsig.Facturae(xades),
 	)
 
 	// Now output the data

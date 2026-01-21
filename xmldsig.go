@@ -23,29 +23,6 @@ type options struct {
 	timeNow      func() time.Time
 }
 
-// XAdESSignerRole defines the accepted signer roles
-type XAdESSignerRole string
-
-// XAdESConfig defines what is expected for the configuration.
-type XAdESConfig struct {
-	Role        XAdESSignerRole    `json:"role"`
-	Description string             `json:"description,omitempty"`
-	Policy      *XAdESPolicyConfig `json:"policy"`
-}
-
-// XAdESPolicyConfig defines what policy details should be used.
-type XAdESPolicyConfig struct {
-	URL         string `json:"url"`                   // URL to the policy definition
-	Description string `json:"description,omitempty"` // Optional human description
-	Algorithm   string `json:"algorithm"`             // eg. SHA1 o SHA256
-	Hash        string `json:"hash"`                  // Base64 encoded hash (usually provided with policy)
-}
-
-// String converts the XAdES role into a string
-func (r XAdESSignerRole) String() string {
-	return string(r)
-}
-
 // WithCertificate expects a path to a file containing a PKCS12 (.p12 or .pfx) certificate
 // file, and a password used to open it.
 func WithCertificate(cert *Certificate) Option {
@@ -59,14 +36,6 @@ func WithCertificate(cert *Certificate) Option {
 func WithDocID(id string) Option {
 	return func(o *options) error {
 		o.docID = id
-		return nil
-	}
-}
-
-// WithXAdES adds the XAdES policy with the suggested role.
-func WithXAdES(config *XAdESConfig) Option {
-	return func(o *options) error {
-		o.xades = config
 		return nil
 	}
 }
