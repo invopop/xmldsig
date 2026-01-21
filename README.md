@@ -29,7 +29,7 @@ func main() {
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	xades := &xmldsig.FacturaeConfig{
+	xades := &xmldsig.FacturaEConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.FacturaePolicyConfig{
@@ -43,7 +43,7 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.Facturae(xades),
+		xmldsig.WithFacturaE(xades),
 	)
 
 	// Now output the data

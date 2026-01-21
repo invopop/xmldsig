@@ -32,13 +32,13 @@ type FacturaEConfig struct {
 // Deprecated: use FacturaEConfig, as this type is specific to FacturaE. Old name XAdESConfig kept only for backwards compatibility with existing code.
 type XAdESConfig = FacturaEConfig
 
-// WithFacturaE adds the FacturaE-specific XAdES policy with the suggested role.
-func WithFacturaE(config *FacturaEConfig) Option {
-	return WithXAdES(config)
-}
-
 // Deprecated: use WithFacturaE, as this function is specific to FacturaE. Old name WithXAdES kept only for backwards compatibility with existing code.
 func WithXAdES(config *XAdESConfig) Option {
+	return WithFacturaE(config)
+}
+
+// WithFacturaE adds the FacturaE-specific XAdES policy with the suggested role.
+func WithFacturaE(config *FacturaEConfig) Option {
 	return func(o *options) error {
 		o.xades = config
 		o.xadesOptions = facturaeXAdESOptions()
