@@ -19,7 +19,6 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 
 API-specific functions returning `xmldsig.XAdESOptions` (`xmldsig.WithFacturaE`, `xmldsig.WithKSeF`, more in the future) will include functions for filling certain struct fields with API-specific requirements, as appropriate.
 
-## TODO check
+## Notes
 
-- KSeF, in the reference signature, for data canonicalizer, uses exclusive canonicalizer (http://www.w3.org/2001/10/xml-exc-c14n#) but in the working code, we use non-exclusive canonicalizer (http://www.w3.org/TR/2001/REC-xml-c14n-20010315)
-- KSeF, in the reference signature, for signed info canonicalizer, uses non-exclusive canonicalizer, but in the working code, we use exclusive canonicalizer
+- KSeF, in the reference signature, for signed info canonicalizer, uses non-exclusive canonicalizer, but in the working code in gobl.ksef, we use exclusive canonicalizer, and non-exclusive one doesn't work
