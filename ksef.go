@@ -36,6 +36,7 @@ func ksefXAdESOptions() XAdESOptions {
 		KeyInfoHash:                             0,
 		SignedInfoCanonicalizer:                 ksefSignedInfoCanonicalizer, // exclusive canonicalizer
 		SignedInfoHash:                          crypto.SHA256,               // used together with RSA algorithm to sign the SignedInfo element
+		IncludeRSAKeyValue:                      false,
 	}
 }
 

@@ -16,9 +16,12 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`; zero disables adding `KeyInfo` to `SignedInfo` > `Reference` | `0` | `crypto.SHA512` | `0` |
 | `SignedInfoCanonicalizer` | `*dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | `canonicalize` from `c14n.go` | `canonicalize` from `c14n.go` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
 | `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | `crypto.SHA256` | `crypto.SHA256` | `crypto.SHA256` |
+| `IncludeRSAKeyValue` | `bool` | Whether to include RSA key value in `KeyInfo` | `false` | `true` | `false` |
 
 API-specific functions returning `xmldsig.XAdESOptions` (`xmldsig.WithFacturaE`, `xmldsig.WithKSeF`, more in the future) will include functions for filling certain struct fields with API-specific requirements, as appropriate.
 
 ## Notes
 
-- KSeF, in the reference signature, for signed info canonicalizer, uses non-exclusive canonicalizer, but in the working code in gobl.ksef, we use exclusive canonicalizer, and non-exclusive one doesn't work
+KSeF, in the reference signature, for signed info canonicalizer, uses non-exclusive canonicalizer. It also matches what's expected by XAdES.
+
+But in the working code in gobl.ksef, we use exclusive canonicalizer, and non-exclusive one doesn't work.

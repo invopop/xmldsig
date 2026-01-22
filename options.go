@@ -21,9 +21,10 @@ type XAdESOptions struct {
 	SignedPropertiesCanonicalizer           dsig.Canonicalizer
 	CertificateHash                         crypto.Hash
 	SignedPropertiesHash                    crypto.Hash
-	KeyInfoHash                             crypto.Hash
+	KeyInfoHash                             crypto.Hash // 0 to disable adding Reference to KeyInfo
 	SignedInfoCanonicalizer                 func([]byte, Namespaces) ([]byte, error)
 	SignedInfoHash                          crypto.Hash
+	IncludeRSAKeyValue                      bool
 }
 
 // normalizeXAdESOptions fills missing values with defaults.
