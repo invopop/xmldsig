@@ -58,7 +58,7 @@ func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
 }
 
 var defaultTimestampFormatter = func(t time.Time) string {
-	return t.UTC().Format("2006-01-02T15:04:05Z")
+	return t.UTC().Format("2006-01-02T15:04:05-07:00") // ISO 8601 with timezone
 }
 
 func defaultIssuerSerializer(seq pkix.RDNSequence) string {

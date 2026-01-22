@@ -18,7 +18,7 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 	if opts.TimestampFormatter == nil {
 		t.Fatal("expected TimestampFormatter to be set")
 	}
-	if got := opts.TimestampFormatter(time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)); got != "2024-01-02T03:04:05Z" {
+	if got := opts.TimestampFormatter(time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)); got != "2024-01-02T03:04:05+00:00" {
 		t.Fatalf("unexpected timestamp format %q", got)
 	}
 	if opts.IssuerSerializer == nil {

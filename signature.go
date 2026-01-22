@@ -29,10 +29,6 @@ const (
 	AlgDSigRSASHA512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
 )
 
-// ISO8601 contains the time format used for signing times
-// (based on https://en.wikipedia.org/wiki/ISO_8601)
-const ISO8601 = "2006-01-02T15:04:05-07:00"
-
 // Signature contains the complete signature to be added
 // to the document.
 type Signature struct {
@@ -305,7 +301,7 @@ func (s *Signature) buildQualifyingProperties() error {
 		SignedProperties: &SignedProperties{
 			ID: fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
 			SignatureProperties: &SignedSignatureProperties{
-				SigningTime: s.opts.timeNow().Format(ISO8601),
+				SigningTime: s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()),
 				SigningCertificate: &SigningCertificate{
 					CertDigest: &Digest{
 						Method: &AlgorithmMethod{

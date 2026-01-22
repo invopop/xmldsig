@@ -6,7 +6,7 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | ----- | ---- | ----------- | ------- | -------- | ---- |
 | `DataCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed, or nil to disable canonicalization | `nil` | `nil` | `dsig.MakeC14N10RecCanonicalizer()` |
 | `DataHash` | `crypto.Hash` | Hash algorithm used on the XML being signed | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA512` |
-| `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05Z` | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05.0000000+00:00` |
+| `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05.0000000+00:00` |
 | `IssuerSerializer` | `func(pkix.RDNSequence) string` | Function to serialize issuer information | `pkix.Name FillFromRDNSequence > pkix.Name String` | `pkix.RDNSequence String` | see below |
 | `SignedSignaturePropertiesCustomElements` | `*[]etree `| Custom elements to include in `SignedSignatureProperties` | `nil` | see below | `nil` |
 | `SignedPropertiesCustomElements` | `*[]etree` | Custom elements to include in `SignedProperties` | `nil` | see below | `nil` |
@@ -22,4 +22,9 @@ API-specific functions returning `xmldsig.XAdESOptions` (`xmldsig.WithFacturaE`,
 
 ## Notes
 
-KSeF, in the reference signature, for signed info canonicalizer, uses the non-exclusive canonicalizer defined by the XAdES specification. The implementation now matches this behavior.
+KSeF, in the reference signature, for signed info canonicalizer, uses the non-exclusive canonicalizer defined by the XAdES specification. A working request uses the exclusive canonicalizer.
+
+## Non-breaking differences
+
+1. Reference element, pointing at the outermost element of the XML being signed, in FacturaE, has attributes `Id` set to `Reference-test` and `Type` set to `http://uri.etsi.org/01903#SignedProperties`. In KSeF, these elements are not required, but including them does not cause any issues.
+2. Signature element in KSeF has attribute `Id` set to `Signature`, while in FacturaE it is `Signature-test`. This element can have any arbitrary value, as long as it is passed in `xades:QualifyingProperties` in `Target` attribute. This applies to other ids.
