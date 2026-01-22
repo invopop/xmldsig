@@ -5,7 +5,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -75,12 +74,8 @@ func TestWithKSeFOptions(t *testing.T) {
 	if opts.SignedInfoCanonicalizer == nil {
 		t.Fatalf("expected SignedInfoCanonicalizer to be set")
 	}
-	if reflect.ValueOf(opts.SignedInfoCanonicalizer).Pointer() != reflect.ValueOf(ksefSignedInfoCanonicalizer).Pointer() {
-		t.Fatalf("unexpected SignedInfoCanonicalizer function assigned")
-	}
-	data := []byte(`<ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:CanonicalizationMethod Algorithm="test"/></ds:SignedInfo>`)
-	if _, err := opts.SignedInfoCanonicalizer(data, Namespaces{DSig: NamespaceDSig}); err != nil {
-		t.Fatalf("SignedInfoCanonicalizer returned error: %v", err)
+	if opts.SignedInfoCanonicalizer.Algorithm() != dsig.CanonicalXML10RecAlgorithmId {
+		t.Fatalf("unexpected SignedInfoCanonicalizer algorithm: %s", opts.SignedInfoCanonicalizer.Algorithm())
 	}
 	if opts.SignedInfoHash != crypto.SHA256 {
 		t.Fatalf("unexpected SignedInfoHash: %v", opts.SignedInfoHash)

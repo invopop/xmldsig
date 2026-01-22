@@ -5,10 +5,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
-	"sort"
 	"time"
 
-	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
@@ -34,7 +32,7 @@ func ksefXAdESOptions() XAdESOptions {
 		CertificateHash:                         crypto.SHA512, // SHA-256 works too
 		SignedPropertiesHash:                    crypto.SHA512, // SHA-256 works too
 		KeyInfoHash:                             0,
-		SignedInfoCanonicalizer:                 ksefSignedInfoCanonicalizer, // exclusive canonicalizer
+		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(),
 		SignedInfoHash:                          crypto.SHA256,               // used together with RSA algorithm to sign the SignedInfo element
 		IncludeRSAKeyValue:                      false,
 	}
@@ -90,30 +88,4 @@ func ksefIssuerSerializer(seq pkix.RDNSequence) string {
 		name.CommonName,
 		firstOrEmpty(name.Country),
 	)
-}
-
-// TODO this should be done opposite way - SignedInfoCanonicalizer should be dsig.Canonicalizer
-func ksefSignedInfoCanonicalizer(data []byte, ns Namespaces) ([]byte, error) {
-	doc := etree.NewDocument()
-	doc.Indent(etree.NoIndent)
-	if err := doc.ReadFromBytes(data); err != nil {
-		return nil, err
-	}
-
-	root := doc.Root()
-	for _, attr := range ns.defs() {
-		match := false
-		for _, existing := range root.Attr {
-			if existing.Space == attr.Space && existing.Key == attr.Key {
-				match = true
-				break
-			}
-		}
-		if !match {
-			root.Attr = append(root.Attr, attr)
-		}
-	}
-	sort.Sort(byCanonicalAttr(root.Attr))
-
-	return dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("").Canonicalize(root)
 }

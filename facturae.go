@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
+	dsig "github.com/russellhaering/goxmldsig"
 )
 
 // XAdESSignerRole defines the accepted signer roles for FacturaE.
@@ -60,7 +61,7 @@ func facturaeXAdESOptions(config *FacturaEConfig) XAdESOptions {
 		CertificateHash:                         crypto.SHA512,
 		SignedPropertiesHash:                    crypto.SHA512,
 		KeyInfoHash:                             crypto.SHA512,
-		SignedInfoCanonicalizer:                 canonicalize,
+		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(),
 		SignedInfoHash:                          crypto.SHA256,
 		IncludeRSAKeyValue:                      true,
 	}

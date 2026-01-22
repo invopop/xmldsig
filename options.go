@@ -22,7 +22,7 @@ type XAdESOptions struct {
 	CertificateHash                         crypto.Hash
 	SignedPropertiesHash                    crypto.Hash
 	KeyInfoHash                             crypto.Hash // 0 to disable adding Reference to KeyInfo
-	SignedInfoCanonicalizer                 func([]byte, Namespaces) ([]byte, error)
+	SignedInfoCanonicalizer                 dsig.Canonicalizer
 	SignedInfoHash                          crypto.Hash
 	IncludeRSAKeyValue                      bool
 }
@@ -49,7 +49,7 @@ func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
 		opts.SignedPropertiesHash = crypto.SHA512
 	}
 	if opts.SignedInfoCanonicalizer == nil {
-		opts.SignedInfoCanonicalizer = canonicalize
+		opts.SignedInfoCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
 	}
 	if opts.SignedInfoHash == 0 {
 		opts.SignedInfoHash = crypto.SHA256

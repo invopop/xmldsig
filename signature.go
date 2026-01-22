@@ -488,7 +488,7 @@ func (s *Signature) buildSignatureValue() error {
 		return err
 	}
 	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
-	data, err = canonicalize(data, ns)
+	data, err = canonicalizeWith(data, ns, s.opts.xadesOptions.SignedInfoCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
