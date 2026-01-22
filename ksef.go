@@ -22,19 +22,20 @@ func WithKSeF() Option {
 }
 
 func ksefXAdESOptions() XAdESOptions {
+	// List of allowed canonicalizers: https://github.com/CIRFMF/ksef-docs/blob/main/auth/podpis-xades.md
 	return XAdESOptions{
-		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(),
-		DataHash:                                crypto.SHA256,
+		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(), // exclusive canonicalizer works too, even though xmlns:xsi and xmlns:xsd attributes are removed from the outermost XML element
+		DataHash:                                crypto.SHA512,                     // SHA-256 works too
 		TimestampFormatter:                      ksefTimestampFormatter,
 		IssuerSerializer:                        ksefIssuerSerializer,
 		SignedSignaturePropertiesCustomElements: nil,
 		SignedPropertiesCustomElements:          nil,
 		SignedPropertiesCanonicalizer:           dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),
-		CertificateHash:                         crypto.SHA256,
-		SignedPropertiesHash:                    crypto.SHA256,
+		CertificateHash:                         crypto.SHA512, // SHA-256 works too
+		SignedPropertiesHash:                    crypto.SHA512, // SHA-256 works too
 		KeyInfoHash:                             0,
-		SignedInfoCanonicalizer:                 ksefSignedInfoCanonicalizer,
-		SignedInfoHash:                          crypto.SHA256,
+		SignedInfoCanonicalizer:                 ksefSignedInfoCanonicalizer, // exclusive canonicalizer
+		SignedInfoHash:                          crypto.SHA256,               // used together with RSA algorithm to sign the SignedInfo element
 	}
 }
 

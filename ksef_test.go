@@ -32,7 +32,7 @@ func TestWithKSeFOptions(t *testing.T) {
 	if opts.DataCanonicalizer.Algorithm() != dsig.CanonicalXML10RecAlgorithmId {
 		t.Fatalf("unexpected DataCanonicalizer algorithm: %s", opts.DataCanonicalizer.Algorithm())
 	}
-	if opts.DataHash != crypto.SHA256 {
+	if opts.DataHash != crypto.SHA512 {
 		t.Fatalf("unexpected DataHash: %v", opts.DataHash)
 	}
 
@@ -62,10 +62,10 @@ func TestWithKSeFOptions(t *testing.T) {
 		t.Fatalf("unexpected SignedPropertiesCanonicalizer algorithm: %s", opts.SignedPropertiesCanonicalizer.Algorithm())
 	}
 
-	if opts.CertificateHash != crypto.SHA256 {
+	if opts.CertificateHash != crypto.SHA512 {
 		t.Fatalf("unexpected CertificateHash: %v", opts.CertificateHash)
 	}
-	if opts.SignedPropertiesHash != crypto.SHA256 {
+	if opts.SignedPropertiesHash != crypto.SHA512 {
 		t.Fatalf("unexpected SignedPropertiesHash: %v", opts.SignedPropertiesHash)
 	}
 	if opts.KeyInfoHash != 0 {
