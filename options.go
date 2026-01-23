@@ -16,6 +16,7 @@ type XAdESOptions struct {
 	DataHash                                crypto.Hash
 	TimestampFormatter                      func(time.Time) string
 	IssuerSerializer                        func(pkix.RDNSequence) string
+	AttachQualifyingProperties              bool
 	SignedSignaturePropertiesCustomElements *[]*etree.Element
 	SignedPropertiesCustomElements          *[]*etree.Element
 	SignedPropertiesCanonicalizer           dsig.Canonicalizer

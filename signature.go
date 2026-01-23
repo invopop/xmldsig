@@ -239,7 +239,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		DSigNamespace: NamespaceDSig,
 	}
 
-	if o.xades != nil {
+	if o.xadesOptions.AttachQualifyingProperties {
 		if err := s.buildQualifyingProperties(); err != nil {
 			return nil, fmt.Errorf("qualifying properties: %w", err)
 		}
@@ -256,6 +256,9 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	}
 
 	if o.timestampURL != "" {
+		if !o.xadesOptions.AttachQualifyingProperties || s.Object == nil || s.Object.QualifyingProperties == nil {
+			return nil, errors.New("timestamp requires qualifying properties")
+		}
 		timestamp, timestampErr := buildTimestampValue(s.Value, o.timestampURL)
 		if timestampErr != nil {
 			return nil, timestampErr
@@ -295,6 +298,18 @@ func (s *Signature) buildQualifyingProperties() error {
 		return fmt.Errorf("certificate digest algorithm: %w", err)
 	}
 
+	// TODO this is temporary and will be replaced by pasting elements directly from the configuration
+	var (
+		description string
+		role        XAdESSignerRole
+		policy      *XAdESPolicyConfig
+	)
+	if cfg := s.opts.xades; cfg != nil {
+		description = cfg.Description
+		role = cfg.Role
+		policy = cfg.Policy
+	}
+
 	qp := &QualifyingProperties{
 		XAdESNamespace: NamespaceXAdES,
 		ID:             fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
@@ -315,11 +330,13 @@ func (s *Signature) buildQualifyingProperties() error {
 						SerialNumber: cert.SerialNumber(),
 					},
 				},
-				PolicyIdentifier: s.xadesPolicyIdentifier(),
+				// TODO PolicyIdentifier should not be hardcoded, but taken from SignedSignaturePropertiesCustomElements
+				PolicyIdentifier: s.xadesPolicyIdentifier(policy),
 			},
+			// TODO DataObjectProperties should not be hardcoded, but taken from SignedPropertiesCustomElements
 			DataObjectProperties: &DataObjectFormat{
 				ObjectReference: "#" + s.referenceID,
-				Description:     s.opts.xades.Description,
+				Description:     description,
 				ObjectIdentifier: &ObjectIdentifier{
 					Identifier: &Identifier{
 						Qualifier: "OIDAsURN",
@@ -332,9 +349,10 @@ func (s *Signature) buildQualifyingProperties() error {
 		},
 	}
 
-	if s.opts.xades.Role != "" {
+	// TODO this should not be hardcoded, but taken from SignedSignaturePropertiesCustomElements
+	if role != "" {
 		qp.SignedProperties.SignatureProperties.SignerRole = &SignerRole{
-			ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xades.Role.String()}},
+			ClaimedRoles: &Roles{ClaimedRole: []string{role.String()}},
 		}
 	}
 
@@ -344,8 +362,7 @@ func (s *Signature) buildQualifyingProperties() error {
 	return nil
 }
 
-func (s *Signature) xadesPolicyIdentifier() *PolicyIdentifier {
-	policy := s.opts.xades.Policy
+func (s *Signature) xadesPolicyIdentifier(policy *XAdESPolicyConfig) *PolicyIdentifier {
 	if policy == nil {
 		return nil
 	}
@@ -406,7 +423,6 @@ func (s *Signature) buildSignedInfo() error {
 	}
 
 	// Add the document digest
-	// TODO this won't work if dataCanonicalizer is nil
 	dataCanonicalizer := s.opts.xadesOptions.DataCanonicalizer
 	dataHash := s.opts.xadesOptions.DataHash
 	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
@@ -437,9 +453,9 @@ func (s *Signature) buildSignedInfo() error {
 		},
 		DigestValue: docDigest,
 	})
-
-	// Add the key info
 	ns := s.opts.namespaces.Add(DSig, NamespaceDSig)
+
+	// Add key info digest, if enabled
 	if s.opts.xadesOptions.KeyInfoHash != 0 {
 		keyInfoHash := s.opts.xadesOptions.KeyInfoHash
 		keyInfoBytes, err := xml.Marshal(s.KeyInfo)
@@ -467,8 +483,8 @@ func (s *Signature) buildSignedInfo() error {
 		})
 	}
 
-	// Finally, if present, add the XAdES digests
-	if s.opts.xades != nil {
+	// Finally, if enabled, add the XAdES digests
+	if s.opts.xadesOptions.AttachQualifyingProperties {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
 		signedPropsCanonicalizer := s.opts.xadesOptions.SignedPropertiesCanonicalizer

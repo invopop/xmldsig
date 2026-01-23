@@ -55,6 +55,7 @@ func facturaeXAdESOptions(config *FacturaEConfig) XAdESOptions {
 		DataHash:                                crypto.SHA512,
 		TimestampFormatter:                      facturaeTimestampFormatter,
 		IssuerSerializer:                        facturaeIssuerSerializer,
+		AttachQualifyingProperties:              true,
 		SignedSignaturePropertiesCustomElements: facturaeSignedSignaturePropertiesCustomElements(config),
 		SignedPropertiesCustomElements:          facturaeSignedPropertiesCustomElements(config),
 		SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(),
@@ -131,7 +132,7 @@ func facturaeSignedPropertiesCustomElements(config *FacturaEConfig) *[]*etree.El
 
 	dataObjectFormat := etree.NewElement("xades:DataObjectFormat")
 	// The reference is filled when QualifyingProperties are assembled.
-	dataObjectFormat.CreateAttr("ObjectReference", "")
+	dataObjectFormat.CreateAttr("ObjectReference", "") // <- TODO paste id of first Reference here
 	dataObjectFormat.CreateElement("xades:Description").SetText(config.Description)
 
 	objectIdentifier := dataObjectFormat.CreateElement("xades:ObjectIdentifier")

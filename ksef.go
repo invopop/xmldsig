@@ -26,6 +26,7 @@ func ksefXAdESOptions() XAdESOptions {
 		DataHash:                                crypto.SHA512,                     // SHA-256 works too
 		TimestampFormatter:                      ksefTimestampFormatter,
 		IssuerSerializer:                        ksefIssuerSerializer,
+		AttachQualifyingProperties:              true,
 		SignedSignaturePropertiesCustomElements: nil,
 		SignedPropertiesCustomElements:          nil,
 		SignedPropertiesCanonicalizer:           dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),

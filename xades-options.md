@@ -8,6 +8,7 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | `DataHash` | `crypto.Hash` | Hash algorithm used on the XML being signed | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA512` |
 | `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05.0000000+00:00` |
 | `IssuerSerializer` | `func(pkix.RDNSequence) string` | Function to serialize issuer information | `pkix.Name FillFromRDNSequence > pkix.Name String` | `pkix.RDNSequence String` | see below |
+| `AttachQualifyingProperties` | `bool` | Whether to add `QualifyingProperties` element | `false` | `true` | `true` |
 | `SignedSignaturePropertiesCustomElements` | `*[]etree `| Custom elements to include in `SignedSignatureProperties` | `nil` | see below | `nil` |
 | `SignedPropertiesCustomElements` | `*[]etree` | Custom elements to include in `SignedProperties` | `nil` | see below | `nil` |
 | `SignedPropertiesCanonicalizer` | `*dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
@@ -21,6 +22,10 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 API-specific functions returning `xmldsig.XAdESOptions` (`xmldsig.WithFacturaE`, `xmldsig.WithKSeF`, more in the future) will include functions for filling certain struct fields with API-specific requirements, as appropriate.
 
 ## Notes
+
+By default `AttachQualifyingProperties` is `false`, so the library only produces XML DSig signatures. Setting it to `true` adds the `QualifyingProperties` element (XAdES). When disabled, options `SignedSignaturePropertiesCustomElements`, `SignedPropertiesCustomElements`, `SignedPropertiesCanonicalizer` have no effect.
+
+## Differences to check
 
 KSeF, in the reference signature, for signed info canonicalizer, uses the non-exclusive canonicalizer defined by the XAdES specification. A working request uses the exclusive canonicalizer.
 

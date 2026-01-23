@@ -36,12 +36,16 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 	if opts.SignedInfoHash != crypto.SHA256 {
 		t.Fatalf("expected SignedInfoHash to default to SHA256, got %v", opts.SignedInfoHash)
 	}
+	if opts.AttachQualifyingProperties {
+		t.Fatal("expected AttachQualifyingProperties to default to false")
+	}
 }
 
 func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
 	custom := &XAdESOptions{
-		DataHash:       crypto.SHA384,
-		SignedInfoHash: crypto.SHA384,
+		DataHash:                   crypto.SHA384,
+		SignedInfoHash:             crypto.SHA384,
+		AttachQualifyingProperties: true,
 	}
 
 	opts := normalizeXAdESOptions(custom)
@@ -51,6 +55,9 @@ func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
 	}
 	if opts.SignedInfoHash != crypto.SHA384 {
 		t.Fatalf("expected SignedInfoHash to remain SHA384, got %v", opts.SignedInfoHash)
+	}
+	if !opts.AttachQualifyingProperties {
+		t.Fatal("expected AttachQualifyingProperties to remain true")
 	}
 }
 
