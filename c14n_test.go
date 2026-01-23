@@ -1,11 +1,15 @@
 package xmldsig
 
-import "testing"
+import (
+	"testing"
+
+	dsig "github.com/russellhaering/goxmldsig"
+)
 
 func TestCanonicalizeKeepsXMLWhenAlreadyCanonical(t *testing.T) {
 	const xmlInput = `<Root attr="value"><Child>text</Child></Root>`
 
-	got, err := canonicalize([]byte(xmlInput), nil)
+	got, err := canonicalizeWith([]byte(xmlInput), nil, dsig.MakeC14N10RecCanonicalizer())
 	if err != nil {
 		t.Fatalf("canonicalize returned error: %v", err)
 	}
@@ -23,7 +27,7 @@ func TestCanonicalizeAddsMissingNamespaces(t *testing.T) {
 		XAdES:  NamespaceXAdES,
 	}
 
-	got, err := canonicalize([]byte(xmlInput), ns)
+	got, err := canonicalizeWith([]byte(xmlInput), ns, dsig.MakeC14N10RecCanonicalizer())
 	if err != nil {
 		t.Fatalf("canonicalize returned error: %v", err)
 	}
@@ -37,7 +41,7 @@ func TestCanonicalizeAddsMissingNamespaces(t *testing.T) {
 func TestCanonicalizeOrdersAttributesByNamespace(t *testing.T) {
 	const xmlInput = `<Invoice xmlns:beta="http://beta.example.com" xmlns:alpha="http://alpha.example.com" beta:Id="b" alpha:Id="a" plain="p"></Invoice>`
 
-	got, err := canonicalize([]byte(xmlInput), nil)
+	got, err := canonicalizeWith([]byte(xmlInput), nil, dsig.MakeC14N10RecCanonicalizer())
 	if err != nil {
 		t.Fatalf("canonicalize returned error: %v", err)
 	}
@@ -55,7 +59,7 @@ line2"/>
     <Content> value </Content>
 </Root>`
 
-	got, err := canonicalize([]byte(xmlInput), nil)
+	got, err := canonicalizeWith([]byte(xmlInput), nil, dsig.MakeC14N10RecCanonicalizer())
 	if err != nil {
 		t.Fatalf("canonicalize returned error: %v", err)
 	}

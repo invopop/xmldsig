@@ -1,6 +1,8 @@
 package xmldsig
 
 import (
+	"fmt"
+
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
 )
@@ -12,10 +14,6 @@ import (
 // Is it an exclusive or inclusive canonicalizer? It doesn't inspect parent elements, just the current element, but it can attach custom namespaces.
 // But result of canonicalization is described as inclusive in the signed XML. This function is used to canonicalize SignedInfo, and for this element,
 // it should be inclusive, as in SignedInfo there are references to other elements.
-
-func canonicalize(data []byte, ns Namespaces) ([]byte, error) {
-	return canonicalizeWith(data, ns, dsig.MakeC14N10RecCanonicalizer())
-}
 
 func canonicalizeWith(data []byte, ns Namespaces, canonicalizer dsig.Canonicalizer) ([]byte, error) {
 	d := etree.NewDocument()
@@ -40,10 +38,7 @@ func canonicalizeWith(data []byte, ns Namespaces, canonicalizer dsig.Canonicaliz
 	}
 
 	if canonicalizer == nil {
-		tmp := etree.NewDocument()
-		tmp.SetRoot(r.Copy())
-		tmp.Indent(etree.NoIndent)
-		return tmp.WriteToBytes()
+		return nil, fmt.Errorf("canonicalizer must not be nil")
 	}
 	return canonicalizer.Canonicalize(r)
 }

@@ -51,13 +51,13 @@ func WithFacturaE(config *FacturaEConfig) Option {
 
 func facturaeXAdESOptions(config *FacturaEConfig) XAdESOptions {
 	return XAdESOptions{
-		DataCanonicalizer:                       nil,
+		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(),
 		DataHash:                                crypto.SHA512,
 		TimestampFormatter:                      facturaeTimestampFormatter,
 		IssuerSerializer:                        facturaeIssuerSerializer,
 		SignedSignaturePropertiesCustomElements: facturaeSignedSignaturePropertiesCustomElements(config),
 		SignedPropertiesCustomElements:          facturaeSignedPropertiesCustomElements(config),
-		SignedPropertiesCanonicalizer:           nil,
+		SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(),
 		CertificateHash:                         crypto.SHA512,
 		SignedPropertiesHash:                    crypto.SHA512,
 		KeyInfoHash:                             crypto.SHA512,
