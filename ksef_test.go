@@ -19,8 +19,8 @@ func TestWithKSeFOptions(t *testing.T) {
 		t.Fatalf("WithKSeF returned error: %v", err)
 	}
 
-	if o.xades != nil {
-		t.Fatalf("expected xades config to be nil for KSeF, got %#v", o.xades)
+	if o.xades == nil {
+		t.Fatalf("expected xades config to be set for KSeF")
 	}
 
 	opts := o.xadesOptions

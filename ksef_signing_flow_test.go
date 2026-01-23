@@ -25,6 +25,8 @@ func TestKSeFSigningFlow(t *testing.T) {
 	originalXML, err := os.ReadFile("data/invoice-vat.xml")
 	require.NoError(t, err)
 
+	rootNamespaces := collectRootNamespaces(t, originalXML)
+
 	signature, err := xmldsig.Sign(originalXML,
 		xmldsig.WithCertificate(certificate),
 		xmldsig.WithKSeF(),
@@ -48,7 +50,7 @@ func TestKSeFSigningFlow(t *testing.T) {
 
 	verifyDocumentReferenceDigest(t, unsignedDocBytes, signature)
 	verifySignedPropertiesDigest(t, signatureCopy, signature)
-	verifySignatureValue(t, signature, certificate)
+	verifySignatureValue(t, signature, signatureCopy, certificate, rootNamespaces)
 }
 
 func attachSignatureToDocument(t *testing.T, docBytes []byte, signature *xmldsig.Signature) []byte {
@@ -99,11 +101,15 @@ func verifySignedPropertiesDigest(t *testing.T, signatureElement *etree.Element,
 
 	canonicalizer := canonicalizerFromTransforms(t, ref.Transforms)
 
-	signedProps := findElementByTag(signatureElement, "xades:SignedProperties")
+	signedProps := signatureElement.FindElement(".//xades:SignedProperties")
 	require.NotNil(t, signedProps, "SignedProperties element missing from signature")
 
 	propsDoc := etree.NewDocument()
 	propsDoc.SetRoot(signedProps.Copy())
+	addNamespaces(propsDoc.Root(), xmldsig.Namespaces{
+		"xades":      xmldsig.NamespaceXAdES,
+		xmldsig.DSig: xmldsig.NamespaceDSig,
+	})
 	propsBytes, err := propsDoc.WriteToBytes()
 	require.NoError(t, err)
 
@@ -115,7 +121,7 @@ func verifySignedPropertiesDigest(t *testing.T, signatureElement *etree.Element,
 	require.Equal(t, expectedDigest, actualDigest, "SignedProperties digest mismatch")
 }
 
-func verifySignatureValue(t *testing.T, sig *xmldsig.Signature, certificate *xmldsig.Certificate) {
+func verifySignatureValue(t *testing.T, sig *xmldsig.Signature, signatureElement *etree.Element, certificate *xmldsig.Certificate, rootNamespaces xmldsig.Namespaces) {
 	t.Helper()
 
 	require.NotNil(t, sig.SignedInfo.CanonicalizationMethod, "SignedInfo canonicalization method missing")
@@ -123,7 +129,13 @@ func verifySignatureValue(t *testing.T, sig *xmldsig.Signature, certificate *xml
 
 	canonicalizer := canonicalizerByAlgorithm(t, sig.SignedInfo.CanonicalizationMethod.Algorithm)
 
-	signedInfoBytes, err := xml.Marshal(sig.SignedInfo)
+	signedInfoEl := signatureElement.FindElement(".//ds:SignedInfo")
+	require.NotNil(t, signedInfoEl, "SignedInfo element not found in signature")
+
+	signedInfoDoc := etree.NewDocument()
+	signedInfoDoc.SetRoot(signedInfoEl.Copy())
+	addNamespaces(signedInfoDoc.Root(), rootNamespacesWithDSig(rootNamespaces))
+	signedInfoBytes, err := signedInfoDoc.WriteToBytes()
 	require.NoError(t, err)
 
 	canonicalized := canonicalizeBytes(t, signedInfoBytes, canonicalizer)
@@ -284,17 +296,62 @@ func findSignatureElement(el *etree.Element) *etree.Element {
 	return nil
 }
 
-func findElementByTag(el *etree.Element, tag string) *etree.Element {
-	if el == nil {
-		return nil
-	}
-	if el.Tag == tag {
-		return el
-	}
-	for _, child := range el.ChildElements() {
-		if found := findElementByTag(child, tag); found != nil {
-			return found
+func collectRootNamespaces(t *testing.T, data []byte) xmldsig.Namespaces {
+	t.Helper()
+
+	doc := etree.NewDocument()
+	require.NoError(t, doc.ReadFromBytes(data))
+
+	namespaces := make(xmldsig.Namespaces)
+	for _, attr := range doc.Root().Attr {
+		if attr.Space == "xmlns" {
+			namespaces[attr.Key] = attr.Value
+		}
+		if attr.Space == "" && attr.Key == "xmlns" {
+			namespaces[""] = attr.Value
 		}
 	}
-	return nil
+	return namespaces
+}
+
+func rootNamespacesWithDSig(ns xmldsig.Namespaces) xmldsig.Namespaces {
+	combined := cloneNamespaces(ns)
+	if combined == nil {
+		combined = make(xmldsig.Namespaces)
+	}
+	combined[xmldsig.DSig] = xmldsig.NamespaceDSig
+	return combined
+}
+
+func cloneNamespaces(ns xmldsig.Namespaces) xmldsig.Namespaces {
+	if ns == nil {
+		return nil
+	}
+	c := make(xmldsig.Namespaces, len(ns))
+	for k, v := range ns {
+		c[k] = v
+	}
+	return c
+}
+
+func addNamespaces(el *etree.Element, namespaces xmldsig.Namespaces) {
+	if el == nil || len(namespaces) == 0 {
+		return
+	}
+	for prefix, uri := range namespaces {
+		found := false
+		for _, attr := range el.Attr {
+			if attr.Space == "xmlns" && attr.Key == prefix {
+				found = true
+				break
+			}
+		}
+		if !found {
+			el.Attr = append(el.Attr, etree.Attr{
+				Space: "xmlns",
+				Key:   prefix,
+				Value: uri,
+			})
+		}
+	}
 }

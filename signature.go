@@ -8,6 +8,7 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/invopop/gobl/uuid"
+	dsig "github.com/russellhaering/goxmldsig"
 )
 
 // Namespaces
@@ -392,10 +393,11 @@ func (s *Signature) buildSignedInfo() error {
 	if err != nil {
 		return fmt.Errorf("signature method: %w", err)
 	}
+	signedInfoCanonicalizer := s.opts.xadesOptions.SignedInfoCanonicalizer
 
 	si := &SignedInfo{
 		CanonicalizationMethod: &AlgorithmMethod{
-			Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
+			Algorithm: signedInfoCanonicalizer.Algorithm().String(),
 		},
 		SignatureMethod: &AlgorithmMethod{
 			Algorithm: signatureMethodAlgorithm,
@@ -404,8 +406,14 @@ func (s *Signature) buildSignedInfo() error {
 	}
 
 	// Add the document digest
+	// TODO this won't work if dataCanonicalizer is nil
+	dataCanonicalizer := s.opts.xadesOptions.DataCanonicalizer
 	dataHash := s.opts.xadesOptions.DataHash
-	docDigest, err := digestBytes(s.doc, dataHash, s.opts.namespaces)
+	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
+	if err != nil {
+		return fmt.Errorf("canonicalize document: %w", err)
+	}
+	docDigest, err := digestBytes(canonicalizedDoc, dataHash)
 	if err != nil {
 		return fmt.Errorf("document digest: %w", err)
 	}
@@ -413,14 +421,16 @@ func (s *Signature) buildSignedInfo() error {
 	if err != nil {
 		return fmt.Errorf("document digest algorithm: %w", err)
 	}
+	docTransforms := []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
+	if alg := dataCanonicalizer.Algorithm().String(); alg != "" {
+		docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
+	}
 	si.Reference = append(si.Reference, &Reference{
 		ID:   s.referenceID,
 		Type: "http://www.w3.org/2000/09/xmldsig#Object",
 		URI:  "",
 		Transforms: &Transforms{
-			Transform: []*AlgorithmMethod{
-				{Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature"},
-			},
+			Transform: docTransforms,
 		},
 		DigestMethod: &AlgorithmMethod{
 			Algorithm: docDigestAlgorithm,
@@ -453,8 +463,17 @@ func (s *Signature) buildSignedInfo() error {
 	if s.opts.xades != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
+		signedPropsCanonicalizer := s.opts.xadesOptions.SignedPropertiesCanonicalizer
+		spBytes, err := xml.Marshal(sp)
+		if err != nil {
+			return fmt.Errorf("marshal signed properties: %w", err)
+		}
+		canonicalizedSignedProps, err := canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
+		if err != nil {
+			return fmt.Errorf("canonicalize signed properties: %w", err)
+		}
 		signedPropsHash := s.opts.xadesOptions.SignedPropertiesHash
-		spDigest, err := digest(sp, signedPropsHash, ns)
+		spDigest, err := digestBytes(canonicalizedSignedProps, signedPropsHash)
 		if err != nil {
 			return fmt.Errorf("xades digest: %w", err)
 		}
@@ -463,7 +482,12 @@ func (s *Signature) buildSignedInfo() error {
 			return fmt.Errorf("xades digest algorithm: %w", err)
 		}
 		si.Reference = append(si.Reference, &Reference{
-			URI:  "#" + sp.ID,
+			URI: "#" + sp.ID,
+			Transforms: &Transforms{
+				Transform: []*AlgorithmMethod{
+					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},
+				},
+			},
 			Type: "http://uri.etsi.org/01903#SignedProperties",
 			DigestMethod: &AlgorithmMethod{
 				Algorithm: signedPropsAlgorithm,

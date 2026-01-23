@@ -33,6 +33,9 @@ func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
 		opts = &XAdESOptions{}
 	}
 
+	if opts.DataCanonicalizer == nil {
+		opts.DataCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
+	}
 	if opts.DataHash == 0 {
 		opts.DataHash = crypto.SHA512
 	}
@@ -47,6 +50,9 @@ func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
 	}
 	if opts.SignedPropertiesHash == 0 {
 		opts.SignedPropertiesHash = crypto.SHA512
+	}
+	if opts.SignedPropertiesCanonicalizer == nil {
+		opts.SignedPropertiesCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
 	}
 	if opts.SignedInfoCanonicalizer == nil {
 		opts.SignedInfoCanonicalizer = dsig.MakeC14N10RecCanonicalizer()

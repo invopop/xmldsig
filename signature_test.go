@@ -78,7 +78,7 @@ func TestSignature(t *testing.T) {
 		assert.Nil(t, err)
 		// This is mostly useful for getting back fixed results, so
 		// we can safely compare the final signature here.
-		assert.Contains(t, signature.Value.Value, "r1GyPRqPZN3LXZ7SKpENUtI7dSXA83aIlza7fG2c1XGnHOK4HNweEDifqg65owS6TYLn7eZtiUXMHN49CUnZ7YDo9O")
+		assert.Contains(t, signature.Value.Value, "OKNSfterL935TKPlMoYxnCs0xiUZk6eZ9gbEQG/4MgCfwqmZJ4suWx62yT1je/D/cY9yKMSmC8gHWRzB6ERXUnJQwS7a7ouMdC4RGSLEqfUI9N/xXFyrmInhWNItkGsrD5DJuMz0v7iEE4Da9VVofW1QzGiSM44ImYpHKWlHcNCzzzkM0BxUWOIAQEKOIT4VhVGiSdbzsV1EqoTZ+Rp1Ho3NAJD2cPKJXklwSF+l3cFvL+Fz5DJBr9uvnfRiWTgZ0TTjT9ELhJU7/Iauj7XSocn6gv57ykyzxESHTFciB71ZTjfz9JtcJ0YvsUJTFavEi7vGZzNMJNRaDn0VWgvmNg==")
 	})
 
 	t.Run("should not set a signer role when not provided", func(t *testing.T) {

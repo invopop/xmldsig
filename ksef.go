@@ -13,7 +13,7 @@ import (
 // WithKSeF configures the signer to use defaults required by the Polish KSeF platform.
 func WithKSeF() Option {
 	return func(o *options) error {
-		o.xades = nil
+		o.xades = &XAdESConfig{}
 		o.xadesOptions = ksefXAdESOptions()
 		return nil
 	}
@@ -33,7 +33,7 @@ func ksefXAdESOptions() XAdESOptions {
 		SignedPropertiesHash:                    crypto.SHA512, // SHA-256 works too
 		KeyInfoHash:                             0,
 		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(),
-		SignedInfoHash:                          crypto.SHA256,               // used together with RSA algorithm to sign the SignedInfo element
+		SignedInfoHash:                          crypto.SHA256, // used together with RSA algorithm to sign the SignedInfo element
 		IncludeRSAKeyValue:                      false,
 	}
 }
