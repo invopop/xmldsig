@@ -442,7 +442,15 @@ func (s *Signature) buildSignedInfo() error {
 	ns := s.opts.namespaces.Add(DSig, NamespaceDSig)
 	if s.opts.xadesOptions.KeyInfoHash != 0 {
 		keyInfoHash := s.opts.xadesOptions.KeyInfoHash
-		keyInfoDigest, err := digest(s.KeyInfo, keyInfoHash, ns)
+		keyInfoBytes, err := xml.Marshal(s.KeyInfo)
+		if err != nil {
+			return fmt.Errorf("marshal key info: %w", err)
+		}
+		canonicalizedKeyInfo, err := canonicalizeWith(keyInfoBytes, ns, dsig.MakeC14N10RecCanonicalizer())
+		if err != nil {
+			return fmt.Errorf("canonicalize key info: %w", err)
+		}
+		keyInfoDigest, err := digestBytes(canonicalizedKeyInfo, keyInfoHash)
 		if err != nil {
 			return fmt.Errorf("key info digest: %w", err)
 		}

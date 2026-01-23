@@ -14,7 +14,7 @@ import (
 // it should be inclusive, as in SignedInfo there are references to other elements.
 
 func canonicalize(data []byte, ns Namespaces) ([]byte, error) {
-	return canonicalizeWith(data, ns, nil)
+	return canonicalizeWith(data, ns, dsig.MakeC14N10RecCanonicalizer())
 }
 
 func canonicalizeWith(data []byte, ns Namespaces, canonicalizer dsig.Canonicalizer) ([]byte, error) {
@@ -40,7 +40,10 @@ func canonicalizeWith(data []byte, ns Namespaces, canonicalizer dsig.Canonicaliz
 	}
 
 	if canonicalizer == nil {
-		canonicalizer = dsig.MakeC14N10RecCanonicalizer()
+		tmp := etree.NewDocument()
+		tmp.SetRoot(r.Copy())
+		tmp.Indent(etree.NoIndent)
+		return tmp.WriteToBytes()
 	}
 	return canonicalizer.Canonicalize(r)
 }
