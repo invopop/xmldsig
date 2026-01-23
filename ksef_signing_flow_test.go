@@ -19,7 +19,7 @@ import (
 // Full end to end test of signing flow
 func TestKSeFSigningFlow(t *testing.T) {
 	// 1. Prepare a signed XML
-	certificate, err := xmldsig.LoadCertificate("data/cert-20260102-131809.pfx", "")
+	certificate, err := xmldsig.LoadCertificate("certs/cert-20260102-131809.pfx", "")
 	require.NoError(t, err)
 
 	originalXML, err := os.ReadFile("data/invoice-vat.xml")

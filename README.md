@@ -1,6 +1,6 @@
 # XML DSig
 
-Partial implementation of the XML DSig standard for Go. Can be used to manage certificates in .p12 format and generate signatures typically used with UBL invoice documents or similar local standards.
+Partial implementation of the XML DSig and XAdES standards for Go. Accepts certificates in .p12/.pfx format and generate signatures typically used with UBL invoice documents or similar local standards.
 
 [![Lint](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml)
 [![Test Go](https://github.com/invopop/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/test.yaml)
@@ -8,12 +8,13 @@ Partial implementation of the XML DSig standard for Go. Can be used to manage ce
 [![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
 ![Latest Tag](https://img.shields.io/github/v/tag/invopop/xmldsig)
 
-## NOTES
+## Changes
 
-- Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the Go structures (`type struct`) you intend to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
 - Type `xmldsig.XAdESConfig` and method `xmldsig.WithXAdES` are renamed, as they were accepting options specific to Spanish FacturaE, not general API-independent options.
 
 ## Predefined settings
+
+The library supports multiple configuration options. For convenience, there are predefined settings:
 
 - `xmldsig.WithFacturaE` - Spanish FacturaE
 - `xmldsig.WithKSeF` - Polish KSeF
@@ -21,6 +22,39 @@ Partial implementation of the XML DSig standard for Go. Can be used to manage ce
 For other standards, provide appropriate settings using the generic `xmldsig.WithRawOptions` method.
 
 ## Usage Example
+
+This example shows how to sign a document using the XAdES standard with Polish KSeF predefined settings. In KSeF, signing an XML is used when logging into the API.
+
+```go
+type AuthTokenRequest struct {
+	XMLName       xml.Name `xml:"AuthTokenRequest"`
+	XMLNamespace  string   `xml:"xmlns,attr"`
+	XSI           string   `xml:"xmlns:xsi,attr"`
+	XSD           string   `xml:"xmlns:xsd,attr"`
+	Challenge     string   `xml:"Challenge"`
+	ContextIdentifier *ContextIdentifier `xml:"ContextIdentifier"`
+	Signature     *xmldsig.Signature `xml:"ds:Signature,omitempty"` // Add signature object!
+}
+
+func main() {
+	authTokenRequest := &AuthTokenRequest{
+		// ... fill in the rest of the fields as needed ...
+	}
+
+	data, _ := xml.Marshal(authTokenRequest)
+	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
+	authTokenRequest.Signature, _ = xmldsig.Sign(data,
+		xmldsig.WithCertificate(cert),
+		xmldsig.WithKSeF(),
+	)
+
+	// Now output the data
+	out, _ := xml.Marshal(authTokenRequest)
+	fmt.Println(string(out))
+}
+```
+
+This example shows how to sign a document using the XAdES standard with Spanish FacturaE predefined settings. Note that this system requires additional configuration parameters to generate additional elements in the signature.
 
 ```go
 type SampleDoc struct {
@@ -69,7 +103,7 @@ xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA) // uses https://freetsa.org/tsr
 
 Signing and certificates can be overwhelming. OpenSSL is the tool to use for clarifying what the situation is and this page has a useful set of commands: https://www.sslshopper.com/article-most-common-openssl-commands.html
 
-This library requires certificates in PKCS12 DER format (`.pki` or `.p12` extension). If you don't have something like that, use the OpenSSL tools to convert between X509 (`.pem`) format and PKCS12.
+This library requires certificates in PKCS12 DER format (`.pfx` or `.p12` extension). If you don't have something like that, use the OpenSSL tools to convert between X509 (`.pem`) format and PKCS12.
 
 The order of certificates is important, the main certificate must come first. You can check order using the following command:
 
