@@ -96,8 +96,8 @@ func TestFacturaeSignedPropertiesCustomElements(t *testing.T) {
 	if objectRef == nil {
 		t.Fatalf("missing ObjectReference attribute")
 	}
-	if objectRef.Value != "" {
-		t.Fatalf("expected empty ObjectReference placeholder, got %s", objectRef.Value)
+	if objectRef.Value != "#Reference" {
+		t.Fatalf("unexpected ObjectReference value: %s", objectRef.Value)
 	}
 
 	description := dataObject.SelectElement("xades:Description")

@@ -131,8 +131,7 @@ func facturaeSignedPropertiesCustomElements(config *FacturaEConfig) *[]*etree.El
 	}
 
 	dataObjectFormat := etree.NewElement("xades:DataObjectFormat")
-	// The reference is filled when QualifyingProperties are assembled.
-	dataObjectFormat.CreateAttr("ObjectReference", "") // <- TODO paste id of first Reference here
+	dataObjectFormat.CreateAttr("ObjectReference", "#Reference")
 	dataObjectFormat.CreateElement("xades:Description").SetText(config.Description)
 
 	objectIdentifier := dataObjectFormat.CreateElement("xades:ObjectIdentifier")

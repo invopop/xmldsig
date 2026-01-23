@@ -42,9 +42,13 @@ type Signature struct {
 	KeyInfo    *KeyInfo    `xml:"ds:KeyInfo"`
 	Object     *Object     `xml:"ds:Object,omitempty"`
 
-	doc         []byte   `xml:"-"`
-	opts        *options `xml:"-"`
-	referenceID string   `xml:"-"` // reference ID to main content
+	doc  []byte   `xml:"-"`
+	opts *options `xml:"-"`
+}
+
+// AlgorithmMethod contains ...
+type AlgorithmMethod struct {
+	Algorithm string `xml:"Algorithm,attr"`
 }
 
 // SignedInfo contains the info that will be signed by
@@ -112,92 +116,8 @@ type QualifyingProperties struct {
 	ID             string `xml:"Id,attr"`
 	Target         string `xml:"Target,attr"`
 
-	SignedProperties   *SignedProperties   `xml:"xades:SignedProperties"`
+	SignedProperties   *EtreeElement       `xml:"xades:SignedProperties"` // etree, not struct - because it may contain custom elements from external configuration
 	UnsignedProperties *UnsignedProperties `xml:"xades:UnsignedProperties,omitempty"`
-}
-
-// SignedProperties contains ...
-type SignedProperties struct {
-	XMLName xml.Name `xml:"xades:SignedProperties"`
-	ID      string   `xml:"Id,attr"`
-
-	SignatureProperties  *SignedSignatureProperties `xml:"xades:SignedSignatureProperties"`
-	DataObjectProperties *DataObjectFormat          `xml:"xades:SignedDataObjectProperties>xades:DataObjectFormat"`
-}
-
-// SignedSignatureProperties contains ...
-type SignedSignatureProperties struct {
-	SigningTime        string              `xml:"xades:SigningTime"`
-	SigningCertificate *SigningCertificate `xml:"xades:SigningCertificate"`
-	PolicyIdentifier   *PolicyIdentifier   `xml:"xades:SignaturePolicyIdentifier"`
-	SignerRole         *SignerRole         `xml:"xades:SignerRole"`
-}
-
-// SigningCertificate contains ...
-type SigningCertificate struct {
-	CertDigest   *Digest       `xml:"xades:Cert>xades:CertDigest"`
-	IssuerSerial *IssuerSerial `xml:"xades:Cert>xades:IssuerSerial"`
-}
-
-// Digest contains ...
-type Digest struct {
-	Method *AlgorithmMethod `xml:"ds:DigestMethod"`
-	Value  string           `xml:"ds:DigestValue"`
-}
-
-// AlgorithmMethod contains ...
-type AlgorithmMethod struct {
-	Algorithm string `xml:"Algorithm,attr"`
-}
-
-// IssuerSerial contains ...
-type IssuerSerial struct {
-	IssuerName   string `xml:"ds:X509IssuerName"`
-	SerialNumber string `xml:"ds:X509SerialNumber"`
-}
-
-// PolicyIdentifier contains ...
-type PolicyIdentifier struct {
-	SigPolicyID   *SigPolicyID `xml:"xades:SignaturePolicyId>xades:SigPolicyId"`
-	SigPolicyHash *Digest      `xml:"xades:SignaturePolicyId>xades:SigPolicyHash"`
-}
-
-// SigPolicyID contains ...
-type SigPolicyID struct {
-	Identifier  string `xml:"xades:Identifier"`
-	Description string `xml:"xades:Description"`
-}
-
-// SignerRole contains ...
-type SignerRole struct {
-	ClaimedRoles *Roles `xml:"xades:ClaimedRoles"`
-}
-
-// Roles contains ...
-type Roles struct {
-	ClaimedRole []string `xml:"xades:ClaimedRole"`
-}
-
-// DataObjectFormat contains ...
-type DataObjectFormat struct {
-	ObjectReference string `xml:"ObjectReference,attr"`
-
-	Description      string            `xml:"xades:Description"`
-	ObjectIdentifier *ObjectIdentifier `xml:"xades:ObjectIdentifier"`
-	MimeType         string            `xml:"xades:MimeType"`
-	Encoding         string            `xml:"xades:Encoding"` // normally empty
-}
-
-// ObjectIdentifier holds and identifier
-type ObjectIdentifier struct {
-	Identifier  *Identifier `xml:"xades:Identifier"`
-	Description string      `xml:"xades:Description"`
-}
-
-// Identifier contains ...
-type Identifier struct {
-	Qualifier string `xml:"Qualifier,attr"`
-	Value     string `xml:",chardata"`
 }
 
 const (
@@ -205,7 +125,7 @@ const (
 	signatureRootIDFormat           = "Signature-%s-Signature"
 	sigPropertiesIDFormat           = "Signature-%s-SignedProperties"
 	sigQualifyingPropertiesIDFormat = "Signature-%s-QualifyingProperties"
-	referenceIDFormat               = "Reference-%s"
+	signedDataReferenceID           = "Reference" // used by SignedPropertiesCustomElements configuration when wiring ObjectReference
 	certificateIDFormat             = "Certificate-%s"
 )
 
@@ -234,7 +154,6 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	s := &Signature{
 		doc:           data,
 		opts:          o,
-		referenceID:   fmt.Sprintf(referenceIDFormat, o.docID),
 		ID:            fmt.Sprintf(signatureRootIDFormat, o.docID),
 		DSigNamespace: NamespaceDSig,
 	}
@@ -298,62 +217,12 @@ func (s *Signature) buildQualifyingProperties() error {
 		return fmt.Errorf("certificate digest algorithm: %w", err)
 	}
 
-	// TODO this is temporary and will be replaced by pasting elements directly from the configuration
-	var (
-		description string
-		role        XAdESSignerRole
-		policy      *XAdESPolicyConfig
-	)
-	if cfg := s.opts.xades; cfg != nil {
-		description = cfg.Description
-		role = cfg.Role
-		policy = cfg.Policy
-	}
-
+	signedPropsElement := s.buildSignedPropertiesElement(cert, certDigestAlgorithm, fingerprint)
 	qp := &QualifyingProperties{
-		XAdESNamespace: NamespaceXAdES,
-		ID:             fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
-		Target:         fmt.Sprintf("#"+signatureRootIDFormat, s.opts.docID),
-		SignedProperties: &SignedProperties{
-			ID: fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
-			SignatureProperties: &SignedSignatureProperties{
-				SigningTime: s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()),
-				SigningCertificate: &SigningCertificate{
-					CertDigest: &Digest{
-						Method: &AlgorithmMethod{
-							Algorithm: certDigestAlgorithm,
-						},
-						Value: fingerprint,
-					},
-					IssuerSerial: &IssuerSerial{
-						IssuerName:   cert.Issuer(),
-						SerialNumber: cert.SerialNumber(),
-					},
-				},
-				// TODO PolicyIdentifier should not be hardcoded, but taken from SignedSignaturePropertiesCustomElements
-				PolicyIdentifier: s.xadesPolicyIdentifier(policy),
-			},
-			// TODO DataObjectProperties should not be hardcoded, but taken from SignedPropertiesCustomElements
-			DataObjectProperties: &DataObjectFormat{
-				ObjectReference: "#" + s.referenceID,
-				Description:     description,
-				ObjectIdentifier: &ObjectIdentifier{
-					Identifier: &Identifier{
-						Qualifier: "OIDAsURN",
-						Value:     "urn:oid:1.2.840.10003.5.109.10",
-					},
-					// Description: "",
-				},
-				MimeType: "text/xml",
-			},
-		},
-	}
-
-	// TODO this should not be hardcoded, but taken from SignedSignaturePropertiesCustomElements
-	if role != "" {
-		qp.SignedProperties.SignatureProperties.SignerRole = &SignerRole{
-			ClaimedRoles: &Roles{ClaimedRole: []string{role.String()}},
-		}
+		XAdESNamespace:   NamespaceXAdES,
+		ID:               fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
+		Target:           fmt.Sprintf("#"+signatureRootIDFormat, s.opts.docID),
+		SignedProperties: NewEtreeElement(signedPropsElement),
 	}
 
 	s.Object = &Object{
@@ -362,22 +231,51 @@ func (s *Signature) buildQualifyingProperties() error {
 	return nil
 }
 
-func (s *Signature) xadesPolicyIdentifier(policy *XAdESPolicyConfig) *PolicyIdentifier {
-	if policy == nil {
-		return nil
+func (s *Signature) buildSignedPropertiesElement(cert *Certificate, certDigestAlgorithm, fingerprint string) *etree.Element {
+	el := etree.NewElement("xades:SignedProperties")
+	el.CreateAttr("Id", fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID))
+
+	signedSignatureProps := el.CreateElement("xades:SignedSignatureProperties")
+	signedSignatureProps.CreateElement("xades:SigningTime").SetText(s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()))
+
+	signingCertificate := signedSignatureProps.CreateElement("xades:SigningCertificate")
+	certElement := signingCertificate.CreateElement("xades:Cert")
+	certDigest := certElement.CreateElement("xades:CertDigest")
+	digestMethod := certDigest.CreateElement("ds:DigestMethod")
+	digestMethod.CreateAttr("Algorithm", certDigestAlgorithm)
+	certDigest.CreateElement("ds:DigestValue").SetText(fingerprint)
+
+	issuerSerial := certElement.CreateElement("xades:IssuerSerial")
+	issuerSerial.CreateElement("ds:X509IssuerName").SetText(s.serializeIssuer(cert))
+	issuerSerial.CreateElement("ds:X509SerialNumber").SetText(cert.SerialNumber())
+
+	appendCustomElements(signedSignatureProps, s.opts.xadesOptions.SignedSignaturePropertiesCustomElements)
+
+	// TODO this looks incorrect - fix
+	if elements := s.opts.xadesOptions.SignedPropertiesCustomElements; elements != nil && len(*elements) > 0 {
+		signedDataObjectProps := el.CreateElement("xades:SignedDataObjectProperties")
+		appendCustomElements(signedDataObjectProps, elements)
 	}
 
-	return &PolicyIdentifier{
-		SigPolicyID: &SigPolicyID{
-			Identifier:  policy.URL,
-			Description: policy.Description,
-		},
-		SigPolicyHash: &Digest{
-			Method: &AlgorithmMethod{
-				Algorithm: policy.Algorithm,
-			},
-			Value: policy.Hash,
-		},
+	return el
+}
+
+func (s *Signature) serializeIssuer(cert *Certificate) string {
+	if serializer := s.opts.xadesOptions.IssuerSerializer; serializer != nil && cert.issuer != nil {
+		return serializer(*cert.issuer)
+	}
+	return cert.Issuer()
+}
+
+func appendCustomElements(parent *etree.Element, elements *[]*etree.Element) {
+	if parent == nil || elements == nil {
+		return
+	}
+	for _, el := range *elements {
+		if el == nil {
+			continue
+		}
+		parent.AddChild(el.Copy())
 	}
 }
 
@@ -445,7 +343,7 @@ func (s *Signature) buildSignedInfo() error {
 		docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
 	}
 	si.Reference = append(si.Reference, &Reference{
-		ID:   s.referenceID,
+		ID:   signedDataReferenceID,
 		Type: "http://www.w3.org/2000/09/xmldsig#Object",
 		URI:  "",
 		Transforms: &Transforms{
@@ -509,7 +407,7 @@ func (s *Signature) buildSignedInfo() error {
 			return fmt.Errorf("xades digest algorithm: %w", err)
 		}
 		si.Reference = append(si.Reference, &Reference{
-			URI: "#" + sp.ID,
+			URI: "#" + sp.ID(),
 			Transforms: &Transforms{
 				Transform: []*AlgorithmMethod{
 					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},
