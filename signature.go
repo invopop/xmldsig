@@ -206,18 +206,10 @@ func addRootNamespaces(ns Namespaces, data []byte) error {
 
 // buildQualifyingProperties is used for the XAdES policy configuration.
 func (s *Signature) buildQualifyingProperties() error {
-	cert := s.opts.cert
-	certHash := s.opts.xadesOptions.CertificateHash
-	fingerprint, err := cert.Fingerprint(certHash)
+	signedPropsElement, err := s.buildSignedPropertiesElement()
 	if err != nil {
-		return fmt.Errorf("certificate fingerprint: %w", err)
+		return err
 	}
-	certDigestAlgorithm, err := hashAlgorithmURI(certHash)
-	if err != nil {
-		return fmt.Errorf("certificate digest algorithm: %w", err)
-	}
-
-	signedPropsElement := s.buildSignedPropertiesElement(cert, certDigestAlgorithm, fingerprint)
 	qp := &QualifyingProperties{
 		XAdESNamespace:   NamespaceXAdES,
 		ID:               fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
@@ -231,7 +223,21 @@ func (s *Signature) buildQualifyingProperties() error {
 	return nil
 }
 
-func (s *Signature) buildSignedPropertiesElement(cert *Certificate, certDigestAlgorithm, fingerprint string) *etree.Element {
+func (s *Signature) buildSignedPropertiesElement() (*etree.Element, error) {
+	cert := s.opts.cert
+	if cert == nil {
+		return nil, errors.New("missing certificate")
+	}
+	certHash := s.opts.xadesOptions.CertificateHash
+	fingerprint, err := cert.Fingerprint(certHash)
+	if err != nil {
+		return nil, fmt.Errorf("certificate fingerprint: %w", err)
+	}
+	certDigestAlgorithm, err := hashAlgorithmURI(certHash)
+	if err != nil {
+		return nil, fmt.Errorf("certificate digest algorithm: %w", err)
+	}
+
 	el := etree.NewElement("xades:SignedProperties")
 	el.CreateAttr("Id", fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID))
 
@@ -252,7 +258,7 @@ func (s *Signature) buildSignedPropertiesElement(cert *Certificate, certDigestAl
 	appendCustomElements(el, s.opts.xadesOptions.SignedPropertiesCustomElements)
 	appendCustomElements(signedSignatureProps, s.opts.xadesOptions.SignedSignaturePropertiesCustomElements)
 
-	return el
+	return el, nil
 }
 
 func (s *Signature) serializeIssuer(cert *Certificate) string {

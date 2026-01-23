@@ -67,13 +67,10 @@ func buildTestSignedPropertiesElement(t *testing.T, sig *Signature) *etree.Eleme
 	cert, err := LoadCertificate(internalTestCertificateFile, internalTestCertificatePass)
 	require.NoError(t, err)
 
-	certHash := sig.opts.xadesOptions.CertificateHash
-	fingerprint, err := cert.Fingerprint(certHash)
-	require.NoError(t, err)
-	certDigestAlgorithm, err := hashAlgorithmURI(certHash)
-	require.NoError(t, err)
+	sig.opts.cert = cert
 
-	el := sig.buildSignedPropertiesElement(cert, certDigestAlgorithm, fingerprint)
+	el, err := sig.buildSignedPropertiesElement()
+	require.NoError(t, err)
 	require.NotNil(t, el)
 	return el
 }
