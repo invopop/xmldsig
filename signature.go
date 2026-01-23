@@ -390,10 +390,13 @@ func (s *Signature) buildKeyInfo() {
 				certificate.NakedPEM(),
 			},
 		},
-		KeyValue: &KeyValue{
+	}
+
+	if s.opts.xadesOptions.IncludeRSAKeyValue {
+		info.KeyValue = &KeyValue{
 			Modulus:  certificate.PrivateKeyInfo().Modulus,
 			Exponent: certificate.PrivateKeyInfo().Exponent,
-		},
+		}
 	}
 
 	for _, ca := range certificate.CaChain {
