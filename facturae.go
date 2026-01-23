@@ -130,7 +130,9 @@ func facturaeSignedPropertiesCustomElements(config *FacturaEConfig) *[]*etree.El
 		return nil
 	}
 
-	dataObjectFormat := etree.NewElement("xades:DataObjectFormat")
+	signedDataObjectProps := etree.NewElement("xades:SignedDataObjectProperties")
+
+	dataObjectFormat := signedDataObjectProps.CreateElement("xades:DataObjectFormat")
 	dataObjectFormat.CreateAttr("ObjectReference", "#Reference")
 	dataObjectFormat.CreateElement("xades:Description").SetText(config.Description)
 
@@ -141,6 +143,6 @@ func facturaeSignedPropertiesCustomElements(config *FacturaEConfig) *[]*etree.El
 
 	dataObjectFormat.CreateElement("xades:MimeType").SetText("text/xml")
 
-	elements := []*etree.Element{dataObjectFormat}
+	elements := []*etree.Element{signedDataObjectProps}
 	return &elements
 }

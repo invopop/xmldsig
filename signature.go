@@ -249,13 +249,8 @@ func (s *Signature) buildSignedPropertiesElement(cert *Certificate, certDigestAl
 	issuerSerial.CreateElement("ds:X509IssuerName").SetText(s.serializeIssuer(cert))
 	issuerSerial.CreateElement("ds:X509SerialNumber").SetText(cert.SerialNumber())
 
+	appendCustomElements(el, s.opts.xadesOptions.SignedPropertiesCustomElements)
 	appendCustomElements(signedSignatureProps, s.opts.xadesOptions.SignedSignaturePropertiesCustomElements)
-
-	// TODO this looks incorrect - fix
-	if elements := s.opts.xadesOptions.SignedPropertiesCustomElements; elements != nil && len(*elements) > 0 {
-		signedDataObjectProps := el.CreateElement("xades:SignedDataObjectProperties")
-		appendCustomElements(signedDataObjectProps, elements)
-	}
 
 	return el
 }

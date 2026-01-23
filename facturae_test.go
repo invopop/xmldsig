@@ -87,9 +87,14 @@ func TestFacturaeSignedPropertiesCustomElements(t *testing.T) {
 		t.Fatalf("expected 1 element, got %d", len(*elements))
 	}
 
-	dataObject := (*elements)[0]
-	if dataObject.Space != "xades" || dataObject.Tag != "DataObjectFormat" {
-		t.Fatalf("unexpected tag for data object: %s:%s", dataObject.Space, dataObject.Tag)
+	signedDataObjectProps := (*elements)[0]
+	if signedDataObjectProps.Space != "xades" || signedDataObjectProps.Tag != "SignedDataObjectProperties" {
+		t.Fatalf("unexpected tag for signed data object props: %s:%s", signedDataObjectProps.Space, signedDataObjectProps.Tag)
+	}
+
+	dataObject := signedDataObjectProps.SelectElement("xades:DataObjectFormat")
+	if dataObject == nil {
+		t.Fatalf("expected DataObjectFormat child")
 	}
 
 	objectRef := dataObject.SelectAttr("ObjectReference")
