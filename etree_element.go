@@ -6,7 +6,12 @@ import (
 	"github.com/beevik/etree"
 )
 
-// EtreeElement wraps an etree.Element so it can be marshaled by encoding/xml.
+// EtreeElement wraps an etree.Element so it can be marshaled by encoding/xml, and be a part of a struct that is marshaled by encoding/xml.
+// Example:
+//
+//	type MyStruct struct {
+//	    Element *EtreeElement `xml:"element"` // <- this will be marshaled as <element>...</element>
+//	}
 type EtreeElement struct {
 	element *etree.Element
 }
@@ -35,7 +40,7 @@ func (e *EtreeElement) ID() string {
 	return e.element.SelectAttrValue("Id", "")
 }
 
-// MarshalXML implements xml.Marshaler so the wrapped etree element is emitted directly.
+// MarshalXML implements xml.Marshaler so the etree element is converted to form usable in an XML struct.
 func (e *EtreeElement) MarshalXML(enc *xml.Encoder, _ xml.StartElement) error {
 	if e == nil || e.element == nil {
 		return nil
