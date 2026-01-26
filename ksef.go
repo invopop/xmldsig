@@ -13,7 +13,6 @@ import (
 // WithKSeF configures the signer to use defaults required by the Polish KSeF platform.
 func WithKSeF() Option {
 	return func(o *options) error {
-		o.xades = &XAdESConfig{}
 		o.xadesOptions = ksefXAdESOptions()
 		return nil
 	}

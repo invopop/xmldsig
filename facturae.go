@@ -46,7 +46,6 @@ func WithXAdES(config *XAdESConfig) Option {
 // WithFacturaE adds the FacturaE-specific XAdES policy with the suggested role.
 func WithFacturaE(config *FacturaEConfig) Option {
 	return func(o *options) error {
-		o.xades = config
 		o.xadesOptions = facturaeXAdESOptions(config)
 		return nil
 	}

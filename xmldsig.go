@@ -19,7 +19,6 @@ type options struct {
 	namespaces   Namespaces // map of namespace name to URL
 	timestampURL string
 	cert         *Certificate
-	xades        *XAdESConfig
 	xadesOptions XAdESOptions
 	timeNow      func() time.Time
 }
