@@ -9,9 +9,9 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05.0000000+00:00` |
 | `IssuerSerializer` | `func(pkix.RDNSequence) string` | Function to serialize issuer information | `pkix.Name FillFromRDNSequence > pkix.Name String` | `pkix.RDNSequence String` | see below |
 | `AttachQualifyingProperties` | `bool` | Whether to add `QualifyingProperties` element | `false` | `true` | `true` |
-| `SignedSignaturePropertiesCustomElements` | `*[]etree `| Custom elements to include in `SignedSignatureProperties` | `nil` | see below | `nil` |
-| `SignedPropertiesCustomElements` | `*[]etree` | Custom elements to include in `SignedProperties` | `nil` | see below | `nil` |
-| `SignedPropertiesCanonicalizer` | `*dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
+| `SignedSignaturePropertiesCustomElements` | `*[]*etree.Element` | Custom elements to include in `SignedSignatureProperties` | `nil` | see below | `nil` |
+| `SignedPropertiesCustomElements` | `*[]*etree.Element` | Custom elements to include in `SignedProperties` | `nil` | see below | `nil` |
+| `SignedPropertiesCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
 | `CertificateHash` | `crypto.Hash` | Hash algorithm on the certificate | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA512` |
 | `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA512` |
 | `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`; zero disables adding `KeyInfo` to `SignedInfo` > `Reference` | `0` | `crypto.SHA512` | `0` |
