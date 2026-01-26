@@ -70,7 +70,7 @@ func TestWithKSeFOptions(t *testing.T) {
 	if opts.SignedInfoCanonicalizer == nil {
 		t.Fatalf("expected SignedInfoCanonicalizer to be set")
 	}
-	if opts.SignedInfoCanonicalizer.Algorithm() != dsig.CanonicalXML10RecAlgorithmId {
+	if opts.SignedInfoCanonicalizer.Algorithm() != dsig.CanonicalXML10ExclusiveAlgorithmId {
 		t.Fatalf("unexpected SignedInfoCanonicalizer algorithm: %s", opts.SignedInfoCanonicalizer.Algorithm())
 	}
 	if opts.SignedInfoHash != crypto.SHA256 {
