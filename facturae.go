@@ -9,11 +9,14 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// XAdESSignerRole defines the accepted signer roles for FacturaE.
-type XAdESSignerRole string
+// FacturaESignerRole defines the accepted signer roles for FacturaE.
+type FacturaESignerRole string
+
+// Deprecated: Use FacturaESignerRole instead. Old name kept only for backwards compatibility with existing code.
+type XAdESSignerRole = FacturaESignerRole
 
 // String converts the XAdES role into a string.
-func (r XAdESSignerRole) String() string {
+func (r FacturaESignerRole) String() string {
 	return string(r)
 }
 
@@ -30,7 +33,7 @@ type XAdESPolicyConfig = FacturaEPolicyConfig
 
 // FacturaEConfig stores options specific to Spanish FacturaE system.
 type FacturaEConfig struct {
-	Role        XAdESSignerRole    `json:"role"`
+	Role        FacturaESignerRole `json:"role"`
 	Description string             `json:"description,omitempty"`
 	Policy      *XAdESPolicyConfig `json:"policy"`
 }
