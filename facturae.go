@@ -17,13 +17,16 @@ func (r XAdESSignerRole) String() string {
 	return string(r)
 }
 
-// XAdESPolicyConfig defines what policy details should be used for FacturaE.
-type XAdESPolicyConfig struct {
+// FacturaEPolicyConfig defines what policy details should be used for FacturaE.
+type FacturaEPolicyConfig struct {
 	URL         string `json:"url"`                   // URL to the policy definition
 	Description string `json:"description,omitempty"` // Optional human description
 	Algorithm   string `json:"algorithm"`             // eg. SHA1 o SHA256
 	Hash        string `json:"hash"`                  // Base64 encoded hash (usually provided with policy)
 }
+
+// Deprecated: use FacturaEPolicyConfig, as this type is specific to FacturaE. Old name XAdESPolicyConfig kept only for backwards compatibility with existing code.
+type XAdESPolicyConfig = FacturaEPolicyConfig
 
 // FacturaEConfig stores options specific to Spanish FacturaE system.
 type FacturaEConfig struct {

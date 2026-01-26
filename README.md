@@ -1,16 +1,12 @@
 # XML DSig
 
-Partial implementation of the XML DSig and XAdES standards for Go. Accepts certificates in .p12/.pfx format and generate signatures typically used with UBL invoice documents or similar local standards.
+Partial implementation of the XML DSig and XAdES standards for Go. Accepts certificates in .p12/.pfx format and generates signatures typically used with UBL invoice documents or similar local standards.
 
 [![Lint](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml)
 [![Test Go](https://github.com/invopop/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/test.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/invopop/xmldsig)](https://goreportcard.com/report/github.com/invopop/xmldsig)
 [![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
 ![Latest Tag](https://img.shields.io/github/v/tag/invopop/xmldsig)
-
-## Changes
-
-- Type `xmldsig.XAdESConfig` and method `xmldsig.WithXAdES` are renamed, as they were accepting options specific to Spanish FacturaE, not general API-independent options.
 
 ## Predefined settings
 
@@ -73,7 +69,7 @@ func main() {
 	xades := &xmldsig.FacturaEConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
-		Policy: &xmldsig.FacturaePolicyConfig{
+		Policy: &xmldsig.FacturaEPolicyConfig{
 			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
 			Description: "Política de Firma FacturaE v3.1",
 			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
@@ -122,6 +118,16 @@ Split the resulting `.pem` file into multiple parts for the key, certificate, an
 ```
 openssl pkcs12 -export -out invopop.p12 -inkey invopop.key -in invopop.crt -certfile invopop.ca
 ```
+
+## Changes
+
+The following types and methods were renamed,  as they were accepting options specific to Spanish FacturaE, not general XAdES options:
+
+- `xmldsig.XAdESConfig` to `xmldsig.FacturaEConfig`
+- `xmldsig.WithXAdES` to `xmldsig.WithFacturaE`
+- `xmldsig.XAdESPolicyConfig` to `xmldsig.FacturaEPolicyConfig`
+
+Old names are still kept in the code as aliases of the new names, but are marked as deprecated.
 
 ## Copyright
 
