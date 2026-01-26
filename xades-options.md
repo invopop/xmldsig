@@ -27,9 +27,10 @@ By default `AttachQualifyingProperties` is `false`, so the library only produces
 
 ## Differences to check
 
-KSeF, in the reference signature, for signed info canonicalizer, uses the non-exclusive canonicalizer defined by the XAdES specification. A working request uses the exclusive canonicalizer.
+KSeF, in the reference signature, for signed info canonicalizer, uses the non-exclusive canonicalizer defined by the XAdES specification. A request known to be working used the exclusive canonicalizer.
 
 ## Non-breaking differences
 
-1. Reference element, pointing at the outermost element of the XML being signed, in FacturaE, has attributes `Id` set to `Reference-test` and `Type` set to `http://uri.etsi.org/01903#SignedProperties`. In KSeF, these elements are not required, but including them does not cause any issues.
-2. Signature element in KSeF has attribute `Id` set to `Signature`, while in FacturaE it is `Signature-test`. This element can have any arbitrary value, as long as it is passed in `xades:QualifyingProperties` in `Target` attribute. This applies to other ids.
+1. Signature element in KSeF reference signature has name `Signature` and in FacturaE `ds:Signature` - it's not a real difference, as in both cases the elements belongs to the same namespace, just in the first one it's unprefixed, and in the second one it's prefixed with `ds`.
+2. Reference element, pointing at the outermost element of the XML being signed, in FacturaE, has attributes `Id` set to `Reference-test` and `Type` set to `http://uri.etsi.org/01903#SignedProperties`. In KSeF, these elements are not required, but including them does not cause any issues.
+3. Signature element in KSeF reference signature has attribute `Id` set to `Signature`, while in FacturaE it is `Signature-test`. This element can have any arbitrary value, as long as it is passed in `xades:QualifyingProperties` in `Target` attribute. This applies to other ids.
