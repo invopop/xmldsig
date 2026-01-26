@@ -6,8 +6,12 @@ import (
 )
 
 var signatureMethodURIs = map[crypto.Hash]string{
-	crypto.SHA256: AlgDSigRSASHA256,
-	crypto.SHA512: AlgDSigRSASHA512,
+	crypto.SHA224:     AlgDSigRSASHA224,
+	crypto.SHA256:     AlgDSigRSASHA256,
+	crypto.SHA384:     AlgDSigRSASHA384,
+	crypto.SHA512:     AlgDSigRSASHA512,
+	crypto.SHA512_224: AlgDSigRSASHA512_224,
+	crypto.SHA512_256: AlgDSigRSASHA512_256,
 }
 
 func signatureMethodURI(hash crypto.Hash) (string, error) {

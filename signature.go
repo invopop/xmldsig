@@ -26,8 +26,12 @@ const (
 
 // Algorithms
 const (
-	AlgDSigRSASHA256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
-	AlgDSigRSASHA512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
+	AlgDSigRSASHA224     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha224"
+	AlgDSigRSASHA256     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+	AlgDSigRSASHA384     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384"
+	AlgDSigRSASHA512     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
+	AlgDSigRSASHA512_224 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512/224"
+	AlgDSigRSASHA512_256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512/256"
 )
 
 // Signature contains the complete signature to be added

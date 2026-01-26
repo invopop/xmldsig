@@ -12,8 +12,12 @@ func TestSignatureMethodURI(t *testing.T) {
 		want      string
 		wantError bool
 	}{
+		{"rsa224", crypto.SHA224, AlgDSigRSASHA224, false},
 		{"rsa256", crypto.SHA256, AlgDSigRSASHA256, false},
+		{"rsa384", crypto.SHA384, AlgDSigRSASHA384, false},
 		{"rsa512", crypto.SHA512, AlgDSigRSASHA512, false},
+		{"rsa512/224", crypto.SHA512_224, AlgDSigRSASHA512_224, false},
+		{"rsa512/256", crypto.SHA512_256, AlgDSigRSASHA512_256, false},
 		{"unsupported hash", crypto.SHA1, "", true},
 	}
 
