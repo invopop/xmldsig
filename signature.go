@@ -24,7 +24,7 @@ const (
 	DSig  = "ds"
 )
 
-// Algorithms
+// Signing algorithms
 const (
 	AlgDSigRSASHA224     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha224"
 	AlgDSigRSASHA256     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
@@ -50,7 +50,7 @@ type Signature struct {
 	opts *options `xml:"-"`
 }
 
-// AlgorithmMethod contains ...
+// AlgorithmMethod contains URL identifier of the signing algorithm (e.g. RSA-SHA256)
 type AlgorithmMethod struct {
 	Algorithm string `xml:"Algorithm,attr"`
 }
@@ -66,7 +66,9 @@ type SignedInfo struct {
 	Reference              []*Reference     `xml:"ds:Reference"`
 }
 
-// Reference contains ...
+// Reference contains information about the document part that is signed
+// Note that there may be multiple references in a signature - in XAdES, one reference is for the outermost XML element,
+// and another reference is for XAdES-specific data (xades:SignedProperties)
 type Reference struct {
 	ID   string `xml:"Id,attr,omitempty"`
 	Type string `xml:"Type,attr,omitempty"`
@@ -77,44 +79,43 @@ type Reference struct {
 	DigestValue  string           `xml:"ds:DigestValue"`
 }
 
-// Transforms contains ...
+// Transforms contains a list of transforms to apply to the document before signing, as URL identifiers - usually includes canonicalization and hash algorithms.
 type Transforms struct {
 	Transform []*AlgorithmMethod `xml:"ds:Transform"`
 }
 
-// Value contains ...
+// Value contains the signature itself (base64-encoded)
 type Value struct {
 	ID    string `xml:"Id,attr"`
 	Value string `xml:",chardata"`
 }
 
-// KeyInfo contains ...
+// KeyInfo contains the public key and certificate information
 type KeyInfo struct {
 	XMLName xml.Name `xml:"ds:KeyInfo"`
 	ID      string   `xml:"Id,attr"`
 
 	X509Data *X509Data `xml:"ds:X509Data,omitempty"`
-	KeyValue *KeyValue `xml:"ds:KeyValue,omitempty"`
+	KeyValue *KeyValue `xml:"ds:KeyValue,omitempty"` // optional, some APIs require it
 }
 
-// X509Data contains ...
+// X509Data contains the certificate chain
 type X509Data struct {
 	X509Certificate []string `xml:"ds:X509Certificate"`
 }
 
-// KeyValue contains ...
+// KeyValue contains the RSA public key (optional, only specific APIs require it)
 type KeyValue struct {
 	Modulus  string `xml:"ds:RSAKeyValue>ds:Modulus"`
 	Exponent string `xml:"ds:RSAKeyValue>ds:Exponent"`
 }
 
-// Object contains ...
+// Object wraps the XAdES qualifying properties
 type Object struct {
 	QualifyingProperties *QualifyingProperties `xml:"xades:QualifyingProperties"`
 }
 
-// QualifyingProperties the funny XaDES signature confirmation policy data. This is the only place the
-// `xades` namespace is required, so we can add it just here.
+// QualifyingProperties contains XAdES-specific signature data. XAdES-specific namespace is required, so we use `xades` prefix.
 type QualifyingProperties struct {
 	XAdESNamespace string `xml:"xmlns:xades,attr,omitempty"`
 	ID             string `xml:"Id,attr"`
@@ -208,7 +209,8 @@ func addRootNamespaces(ns Namespaces, data []byte) error {
 	return nil
 }
 
-// buildQualifyingProperties is used for the XAdES policy configuration.
+// buildQualifyingProperties attaches XAdES policy configuration to the signature object.
+// If not using XAdES, but raw XMLDSIG, this function should not be called.
 func (s *Signature) buildQualifyingProperties() error {
 	signedPropsElement, err := s.buildSignedPropertiesElement()
 	if err != nil {
@@ -455,7 +457,7 @@ func (s *Signature) buildSignatureValue() error {
 	return nil
 }
 
-// UnsignedProperties contains ...
+// UnsignedProperties contains signature data not included in the SignedInfo (e.g. verified timestamp)
 type UnsignedProperties struct {
 	SignatureTimestamp *Timestamp `xml:"xades:UnsignedSignatureProperties>xades:SignatureTimestamp"`
 }

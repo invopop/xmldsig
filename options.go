@@ -16,7 +16,7 @@ type XAdESOptions struct {
 	DataHash                                crypto.Hash
 	TimestampFormatter                      func(time.Time) string
 	IssuerSerializer                        func(pkix.RDNSequence) string
-	AttachQualifyingProperties              bool
+	AttachQualifyingProperties              bool // Whether to attach XAdES qualifying properties to the signature - disabling will result in a XMLDSIG signature but without XAdES compliance
 	SignedSignaturePropertiesCustomElements *[]*etree.Element
 	SignedPropertiesCustomElements          *[]*etree.Element
 	SignedPropertiesCanonicalizer           dsig.Canonicalizer

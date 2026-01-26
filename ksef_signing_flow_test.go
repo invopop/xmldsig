@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Full end to end test of signing flow
+// Full end to end test of signing flow - creates a signature and verifies that all hashes are correct
 func TestKSeFSigningFlow(t *testing.T) {
 	// 1. Prepare a signed XML
 	certificate, err := xmldsig.LoadCertificate("certs/cert-20260102-131809.pfx", "")
