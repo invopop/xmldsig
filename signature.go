@@ -11,20 +11,20 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// Namespaces
+// Namespaces used in XML-DSig and XAdES.
 const (
 	NamespaceXAdES = "http://uri.etsi.org/01903/v1.3.2#"
 	NamespaceDSig  = "http://www.w3.org/2000/09/xmldsig#"
 )
 
-// Namespace names (short)
+// XML namespace prefixes.
 const (
 	XMLNS = "xmlns"
 	XAdES = "xades"
 	DSig  = "ds"
 )
 
-// Signing algorithms
+// Supported signing algorithms URIs.
 const (
 	AlgDSigRSASHA224     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha224"
 	AlgDSigRSASHA256     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
