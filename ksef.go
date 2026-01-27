@@ -21,7 +21,7 @@ func WithKSeF() Option {
 func ksefXAdESOptions() XAdESOptions {
 	// List of allowed canonicalizers: https://github.com/CIRFMF/ksef-docs/blob/main/auth/podpis-xades.md
 	return XAdESOptions{
-		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(), // exclusive canonicalizer works too, even though xmlns:xsi and xmlns:xsd attributes are removed from the outermost XML element
+		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(), // outermost element, so inclusive and exclusive canonicalizers work identically
 		DataHash:                                crypto.SHA512,                     // SHA-256 works too
 		TimestampFormatter:                      ksefTimestampFormatter,
 		IssuerSerializer:                        ksefIssuerSerializer,

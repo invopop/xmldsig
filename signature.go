@@ -195,6 +195,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	return s, nil
 }
 
+// addRootNamespaces extracts namespaces from the root element - needed for inclusive canonicalization
 func addRootNamespaces(ns Namespaces, data []byte) error {
 	d := etree.NewDocument()
 	if err := d.ReadFromBytes(data); err != nil {
@@ -370,7 +371,7 @@ func (s *Signature) buildSignedInfo() error {
 		if err != nil {
 			return fmt.Errorf("marshal key info: %w", err)
 		}
-		canonicalizedKeyInfo, err := canonicalizeWith(keyInfoBytes, ns, dsig.MakeC14N10RecCanonicalizer())
+		canonicalizedKeyInfo, err := canonicalizeWith(keyInfoBytes, ns, dsig.MakeC14N10RecCanonicalizer()) // TODO make configurable
 		if err != nil {
 			return fmt.Errorf("canonicalize key info: %w", err)
 		}
@@ -439,7 +440,7 @@ func (s *Signature) buildSignatureValue() error {
 	if err != nil {
 		return err
 	}
-	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
+	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace) // namespace of ds:Signature
 	data, err = canonicalizeWith(data, ns, s.opts.xadesOptions.SignedInfoCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize: %w", err)

@@ -72,3 +72,37 @@ line2"/>
 		t.Fatalf("canonicalize mismatch\nwant: %q\n got: %q", want, string(got))
 	}
 }
+
+func TestCanonicalizeHandlesUnusedAncestorNamespaces(t *testing.T) {
+	const xmlInput = `<Element>content</Element>`
+	ns := Namespaces{
+		"ns1": "urn:unused",
+	}
+
+	t.Run("Inclusive keeps unused namespaces", func(t *testing.T) {
+		got, err := canonicalizeWith([]byte(xmlInput), ns, dsig.MakeC14N10RecCanonicalizer())
+		if err != nil {
+			t.Fatalf("canonicalize error: %v", err)
+		}
+
+		// Unused namespace should be present because it's from ancestor context
+		// and Inclusive C14N 1.0 preserves it.
+		const want = `<Element xmlns:ns1="urn:unused">content</Element>`
+		if string(got) != want {
+			t.Errorf("want %q, got %q", want, string(got))
+		}
+	})
+
+	t.Run("Exclusive removes unused namespaces", func(t *testing.T) {
+		got, err := canonicalizeWith([]byte(xmlInput), ns, dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""))
+		if err != nil {
+			t.Fatalf("canonicalize error: %v", err)
+		}
+
+		// Unused namespace should be removed by Exclusive C14N
+		const want = `<Element>content</Element>`
+		if string(got) != want {
+			t.Errorf("want %q, got %q", want, string(got))
+		}
+	})
+}
