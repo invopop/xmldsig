@@ -121,7 +121,13 @@ openssl pkcs12 -export -out invopop.p12 -inkey invopop.key -in invopop.crt -cert
 
 ## Changes
 
-The following types and methods were renamed,  as they were accepting options specific to Spanish FacturaE, not general XAdES options:
+### Add information about canonicalization method to SignedInfo
+
+Before this change, the library was performing canonicalization on the signed data and `SignedProperties` elements, but was not adding appropriate `Transform` elements, describing the canonicalization method, to the `SignedInfo` element.
+
+### Renamed methods
+
+The following types and methods were renamed, as they were accepting options specific to Spanish FacturaE, not general XAdES options:
 
 - `xmldsig.XAdESConfig` to `xmldsig.FacturaEConfig`
 - `xmldsig.WithXAdES` to `xmldsig.WithFacturaE`
