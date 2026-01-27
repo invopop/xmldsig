@@ -341,17 +341,33 @@ func addNamespaces(el *etree.Element, namespaces xmldsig.Namespaces) {
 	for prefix, uri := range namespaces {
 		found := false
 		for _, attr := range el.Attr {
-			if attr.Space == "xmlns" && attr.Key == prefix {
-				found = true
-				break
+			// Check for default namespace
+			if prefix == "" {
+				if attr.Space == "" && attr.Key == "xmlns" {
+					found = true
+					break
+				}
+			} else {
+				if attr.Space == "xmlns" && attr.Key == prefix {
+					found = true
+					break
+				}
 			}
 		}
 		if !found {
-			el.Attr = append(el.Attr, etree.Attr{
-				Space: "xmlns",
-				Key:   prefix,
-				Value: uri,
-			})
+			if prefix == "" {
+				el.Attr = append(el.Attr, etree.Attr{
+					Space: "",
+					Key:   "xmlns",
+					Value: uri,
+				})
+			} else {
+				el.Attr = append(el.Attr, etree.Attr{
+					Space: "xmlns",
+					Key:   prefix,
+					Value: uri,
+				})
+			}
 		}
 	}
 }

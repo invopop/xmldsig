@@ -99,11 +99,19 @@ func (ns Namespaces) Add(name, url string) Namespaces {
 func (ns Namespaces) defs() []etree.Attr {
 	attrs := make([]etree.Attr, 0)
 	for k, v := range ns {
-		attrs = append(attrs, etree.Attr{
-			Space: "xmlns",
-			Key:   k,
-			Value: v,
-		})
+		if k == "" {
+			attrs = append(attrs, etree.Attr{
+				Space: "",
+				Key:   "xmlns",
+				Value: v,
+			})
+		} else {
+			attrs = append(attrs, etree.Attr{
+				Space: "xmlns",
+				Key:   k,
+				Value: v,
+			})
+		}
 	}
 	return attrs
 }

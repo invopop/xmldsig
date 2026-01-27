@@ -205,6 +205,8 @@ func addRootNamespaces(ns Namespaces, data []byte) error {
 	for _, a := range d.Root().Attr {
 		if a.Space == XMLNS {
 			ns[a.Key] = a.Value
+		} else if a.Space == "" && a.Key == XMLNS {
+			ns[""] = a.Value
 		}
 	}
 	return nil
