@@ -32,8 +32,8 @@ func ksefXAdESOptions() XAdESOptions {
 		CertificateHash:                         crypto.SHA512, // SHA-256 works too
 		SignedPropertiesHash:                    crypto.SHA512, // SHA-256 works too
 		KeyInfoHash:                             0,
-		SignedInfoCanonicalizer:                 dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),
-		SignedInfoHash:                          crypto.SHA256, // used together with RSA algorithm to sign the SignedInfo element
+		SignedInfoCanonicalizer:                 dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""), // inclusive works too
+		SignedInfoHash:                          crypto.SHA256,
 		IncludeRSAKeyValue:                      false,
 	}
 }
