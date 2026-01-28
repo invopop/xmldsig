@@ -301,9 +301,12 @@ func (s *Signature) buildKeyInfo() {
 	}
 
 	if s.opts.xadesOptions.IncludeRSAKeyValue {
-		info.KeyValue = &KeyValue{
-			Modulus:  certificate.PrivateKeyInfo().Modulus,
-			Exponent: certificate.PrivateKeyInfo().Exponent,
+		privateKeyInfo := certificate.PrivateKeyInfo()
+		if privateKeyInfo != nil {
+			info.KeyValue = &KeyValue{
+				Modulus:  privateKeyInfo.Modulus,
+				Exponent: privateKeyInfo.Exponent,
+			}
 		}
 	}
 

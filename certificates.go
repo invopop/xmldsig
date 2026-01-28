@@ -24,7 +24,7 @@ var ErrNotFound = errors.New("not found")
 // Certificate stores information about a signing Certificate
 // which can be used to sign a facturae XML
 type Certificate struct {
-	privateKey  *rsa.PrivateKey
+	privateKey  crypto.Signer
 	certificate *x509.Certificate
 	CaChain     []*x509.Certificate
 	issuer      *pkix.RDNSequence
@@ -55,9 +55,12 @@ func LoadCertificate(path, password string) (*Certificate, error) {
 		return nil, err
 	}
 
-	rsaPrivateKey := privateKey.(*rsa.PrivateKey)
+	signer, ok := privateKey.(crypto.Signer)
+	if !ok {
+		return nil, fmt.Errorf("unsupported key type")
+	}
 	return &Certificate{
-		privateKey:  rsaPrivateKey,
+		privateKey:  signer,
 		certificate: certificate,
 		CaChain:     caChain,
 		issuer:      issuer,
@@ -65,7 +68,7 @@ func LoadCertificate(path, password string) (*Certificate, error) {
 }
 
 // Sign hashes the provided data with the requested hash algorithm and signs the
-// digest using the configured RSA private key.
+// digest using the configured private key.
 func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
 	if hash == 0 {
 		hash = crypto.SHA256
@@ -80,7 +83,7 @@ func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
 	}
 	digest := hasher.Sum(nil)
 
-	signature, signingErr := rsa.SignPKCS1v15(rand.Reader, cert.privateKey, hash, digest)
+	signature, signingErr := cert.privateKey.Sign(rand.Reader, digest, hash)
 	if signingErr != nil {
 		return "", signingErr
 	}
@@ -113,9 +116,13 @@ func (cert *Certificate) PEM() []byte {
 	return PEMCertificate(cert.certificate)
 }
 
-// PrivateKey provides the private key in PEM format.
+// PrivateKey provides the private key in PEM format, if it's a RSA key.
 func (cert *Certificate) PrivateKey() []byte {
-	return PEMPrivateRSAKey(cert.privateKey)
+	privateKey, ok := cert.privateKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil
+	}
+	return PEMPrivateRSAKey(privateKey)
 }
 
 // NakedPEM converts a x509 formated certificate to the PEM format without
@@ -160,13 +167,18 @@ func (cert *Certificate) SerialNumber() string {
 
 // PrivateKeyInfo is the  RSA private key info
 func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
+	privateKey, ok := cert.privateKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil
+	}
+
 	exponentBytes := make([]byte, 3)
-	exponentBytes[0] = byte(cert.privateKey.E >> 16)
-	exponentBytes[1] = byte(cert.privateKey.E >> 8)
-	exponentBytes[2] = byte(cert.privateKey.E)
+	exponentBytes[0] = byte(privateKey.E >> 16)
+	exponentBytes[1] = byte(privateKey.E >> 8)
+	exponentBytes[2] = byte(privateKey.E)
 
 	return &PrivateKeyInfo{
-		Modulus:  base64.StdEncoding.EncodeToString(cert.privateKey.N.Bytes()),
+		Modulus:  base64.StdEncoding.EncodeToString(privateKey.N.Bytes()),
 		Exponent: base64.StdEncoding.EncodeToString(exponentBytes),
 	}
 }
