@@ -15,6 +15,7 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | `CertificateHash` | `crypto.Hash` | Hash algorithm on the certificate | SHA512 | SHA512 | SHA512 |
 | `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` | SHA512 | SHA512 | SHA512 |
 | `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`; zero disables adding `KeyInfo` to `SignedInfo` > `Reference` | `0` | SHA512 | `0` |
+| `KeyInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `KeyInfo`; must be set along with `KeyInfoHash` to add `KeyInfo` to `SignedInfo` > `Reference` | `nil` | Inclusive C14N10 | `nil` |
 | `SignedInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | Inclusive C14N10 | Inclusive C14N10 | Inclusive C14N10 |
 | `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | SHA256 | SHA256 | SHA256 |
 | `IncludeRSAKeyValue` | `bool` | Whether to include RSA key value in `KeyInfo` | `false` | `true` | `false` |
@@ -30,7 +31,9 @@ There are more, and can be used in our library's configuration, but default conf
 
 ## Notes
 
-By default `AttachQualifyingProperties` is `false`, so the library only produces XML DSig signatures. Setting it to `true` adds the `QualifyingProperties` element (XAdES). When disabled, options `SignedSignaturePropertiesCustomElements`, `SignedPropertiesCustomElements`, `SignedPropertiesCanonicalizer` have no effect.
+1. By default `AttachQualifyingProperties` is `false`, so the library only produces XML DSig signatures. Setting it to `true` adds the `QualifyingProperties` element (XAdES). When disabled, options `SignedSignaturePropertiesCustomElements`, `SignedPropertiesCustomElements`, `SignedPropertiesCanonicalizer` have no effect.
+
+2. Adding non-zero value to `KeyInfoHash` together with a non-nil `KeyInfoCanonicalizer` enables adding `KeyInfo` to `SignedInfo` > `Reference`. This element contains the certificate used to sign the document. FacturaE API requires this element to be present, while KSeF does not.
 
 ## Differences to check
 

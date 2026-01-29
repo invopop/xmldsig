@@ -36,6 +36,9 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 	if opts.SignedInfoHash != crypto.SHA256 {
 		t.Fatalf("expected SignedInfoHash to default to SHA256, got %v", opts.SignedInfoHash)
 	}
+	if opts.KeyInfoCanonicalizer != nil {
+		t.Fatal("expected KeyInfoCanonicalizer to default to nil")
+	}
 	if opts.AttachQualifyingProperties {
 		t.Fatal("expected AttachQualifyingProperties to default to false")
 	}

@@ -66,6 +66,9 @@ func TestWithKSeFOptions(t *testing.T) {
 	if opts.KeyInfoHash != 0 {
 		t.Fatalf("expected KeyInfoHash to be zero, got %v", opts.KeyInfoHash)
 	}
+	if opts.KeyInfoCanonicalizer != nil {
+		t.Fatal("expected KeyInfoCanonicalizer to be nil")
+	}
 
 	if opts.SignedInfoCanonicalizer == nil {
 		t.Fatalf("expected SignedInfoCanonicalizer to be set")
