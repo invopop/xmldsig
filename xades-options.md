@@ -6,7 +6,7 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | ----- | ---- | ----------- | ------- | -------- | ---- |
 | `DataCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed | Inclusive C14N10 | Inclusive C14N10 | Inclusive C14N10 |
 | `DataHash` | `crypto.Hash` | Hash algorithm used on the XML being signed | SHA512 | SHA512 | SHA512 |
-| `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05.0000000+00:00` |
+| `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05+00:00` | with `2006-01-02T15:04:05+00:00` | with `2006-01-02T15:04:05.0000000+00:00` |
 | `IssuerSerializer` | `func(pkix.RDNSequence) string` | Function to serialize issuer information | `pkix.Name FillFromRDNSequence > pkix.Name String` | `pkix.RDNSequence String` | see below |
 | `AttachQualifyingProperties` | `bool` | Whether to add `QualifyingProperties` element | `false` | `true` | `true` |
 | `SignedSignaturePropertiesCustomElements` | `*[]*etree.Element` | Custom elements to include in `SignedSignatureProperties` | `nil` | see below | `nil` |
