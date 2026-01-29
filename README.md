@@ -12,7 +12,7 @@ Partial implementation of the XML DSig and XAdES standards for Go. Accepts certi
 
 The library supports multiple configuration options. It's possible to specify options such as:
 
-- whether to attach QualifyingProperties element (XAdES) or not (XML DSig)
+- whether to attach QualifyingProperties element (XAdES) or not (XML DSig but without XAdES)
 - custom XML elements to include in SignedProperties and SignedSignatureProperties (some APIs require it, some don't)
 - what canonicalizers to use
 - what hashes to use
@@ -40,8 +40,8 @@ For other APIs, it's possible to provide appropriate settings by creating a stru
 		SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the SignedProperties element
 		SignedPropertiesHash:                    crypto.SHA512,											// Hash algorithm for the SignedProperties element
 		CertificateHash:                         crypto.SHA512, 										// Hash algorithm for the certificate, for xades:CertDigest element
-		KeyInfoCanonicalizer:                    nil, 															// Canonicalization algorithm for the KeyInfo element - must be non-nil to add KeyInfo to SignedInfo
-		KeyInfoHash:                             0, 																// Hash algorithm for the KeyInfo element - must be non-zero to add KeyInfo to SignedInfo
+		KeyInfoCanonicalizer:                    nil, 															// Canonicalization algorithm for the KeyInfo element - must be non-nil to add reference to KeyInfo in SignedInfo
+		KeyInfoHash:                             0, 																// Hash algorithm for the KeyInfo element - must be non-zero to add reference to KeyInfo in SignedInfo
 		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the SignedInfo element
 		SignedInfoHash:                          crypto.SHA256,											// Hash algorithm for the SignedInfo element
 		IncludeRSAKeyValue:                      false, 														// Whether to include RSA key value in KeyInfo
@@ -133,6 +133,8 @@ Support is also included for using a Time Stamp Authority (TSA). Simply add the 
 ```go
 xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA) // uses https://freetsa.org/tsr
 ```
+
+Using this option requires `AttachQualifyingProperties` to be true, as the timestamp is added to `QualifyingProperties` > `UnsignedProperties` > `SignatureTimestamp` element.
 
 ## Certificates
 
