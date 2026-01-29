@@ -39,7 +39,7 @@ func ksefXAdESOptions() XAdESOptions {
 }
 
 func ksefTimestampFormatter(t time.Time) string {
-	return t.UTC().Format("2006-01-02T15:04:05.0000000-07:00")
+	return t.UTC().Format("2006-01-02T15:04:05.0000000+00:00")
 }
 
 var (

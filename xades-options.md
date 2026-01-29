@@ -4,26 +4,36 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 
 | Field | Type | Description | Default | FacturaE | KSeF | 
 | ----- | ---- | ----------- | ------- | -------- | ---- |
-| `DataCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` |
-| `DataHash` | `crypto.Hash` | Hash algorithm used on the XML being signed | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA512` |
-| `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05-07:00` | with `2006-01-02T15:04:05.0000000+00:00` |
+| `DataCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed | Inclusive C14N10 | Inclusive C14N10 | Inclusive C14N10 |
+| `DataHash` | `crypto.Hash` | Hash algorithm used on the XML being signed | SHA512 | SHA512 | SHA512 |
+| `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05+00:00` (converted to UTC) | with `2006-01-02T15:04:05-07:00` (local time, not converted to UTC) | with `2006-01-02T15:04:05.0000000+00:00` (converted to UTC) |
 | `IssuerSerializer` | `func(pkix.RDNSequence) string` | Function to serialize issuer information | `pkix.Name FillFromRDNSequence > pkix.Name String` | `pkix.RDNSequence String` | see below |
 | `AttachQualifyingProperties` | `bool` | Whether to add `QualifyingProperties` element | `false` | `true` | `true` |
 | `SignedSignaturePropertiesCustomElements` | `*[]*etree.Element` | Custom elements to include in `SignedSignatureProperties` | `nil` | see below | `nil` |
 | `SignedPropertiesCustomElements` | `*[]*etree.Element` | Custom elements to include in `SignedProperties` | `nil` | see below | `nil` |
-| `SignedPropertiesCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")` |
-| `CertificateHash` | `crypto.Hash` | Hash algorithm on the certificate | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA512` |
-| `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` | `crypto.SHA512` | `crypto.SHA512` | `crypto.SHA512` |
-| `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`; zero disables adding `KeyInfo` to `SignedInfo` > `Reference` | `0` | `crypto.SHA512` | `0` |
-| `SignedInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` | `dsig.MakeC14N10RecCanonicalizer()` |
-| `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | `crypto.SHA256` | `crypto.SHA256` | `crypto.SHA256` |
+| `SignedPropertiesCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` | Inclusive C14N10 | Exclusive C14N10 | Exclusive C14N10 |
+| `CertificateHash` | `crypto.Hash` | Hash algorithm on the certificate | SHA512 | SHA512 | SHA512 |
+| `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` | SHA512 | SHA512 | SHA512 |
+| `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`; zero disables adding `KeyInfo` to `SignedInfo` > `Reference` | `0` | SHA512 | `0` |
+| `KeyInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `KeyInfo`; must be set along with `KeyInfoHash` to add `KeyInfo` to `SignedInfo` > `Reference` | `nil` | Inclusive C14N10 | `nil` |
+| `SignedInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | Inclusive C14N10 | Inclusive C14N10 | Inclusive C14N10 |
+| `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | SHA256 | SHA256 | SHA256 |
 | `IncludeRSAKeyValue` | `bool` | Whether to include RSA key value in `KeyInfo` | `false` | `true` | `false` |
 
 API-specific functions returning `xmldsig.XAdESOptions` (`xmldsig.WithFacturaE`, `xmldsig.WithKSeF`, more in the future) will include functions for filling certain struct fields with API-specific requirements, as appropriate.
 
+`dsig.Canonicalizer` is a Go interface fulfilled by various canonicalizers provided by `github.com/russellhaering/goxmldsig` library. For example:
+
+- Inclusive C14N10 canonicalizer is `dsig.MakeC14N10RecCanonicalizer()`
+- Exclusive C14N10 canonicalizer is `dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")`
+
+There are more, and can be used in our library's configuration, but default configurations (FacturaE, KSeF) use these two.
+
 ## Notes
 
-By default `AttachQualifyingProperties` is `false`, so the library only produces XML DSig signatures. Setting it to `true` adds the `QualifyingProperties` element (XAdES). When disabled, options `SignedSignaturePropertiesCustomElements`, `SignedPropertiesCustomElements`, `SignedPropertiesCanonicalizer` have no effect.
+1. By default `AttachQualifyingProperties` is `false`, so the library only produces XML DSig signatures. Setting it to `true` adds the `QualifyingProperties` element (XAdES). When disabled, options `SignedSignaturePropertiesCustomElements`, `SignedPropertiesCustomElements`, `SignedPropertiesCanonicalizer` have no effect.
+
+2. Adding non-zero value to `KeyInfoHash` together with a non-nil `KeyInfoCanonicalizer` enables adding `KeyInfo` to `SignedInfo` > `Reference`. This element contains the certificate used to sign the document. FacturaE API requires this element to be present, while KSeF does not.
 
 ## Differences to check
 

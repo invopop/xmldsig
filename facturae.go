@@ -67,6 +67,7 @@ func facturaeXAdESOptions(config *FacturaEConfig) XAdESOptions {
 		CertificateHash:                         crypto.SHA512,
 		SignedPropertiesHash:                    crypto.SHA512,
 		KeyInfoHash:                             crypto.SHA512,
+		KeyInfoCanonicalizer:                    dsig.MakeC14N10RecCanonicalizer(),
 		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(),
 		SignedInfoHash:                          crypto.SHA256,
 		IncludeRSAKeyValue:                      true,

@@ -23,6 +23,7 @@ type XAdESOptions struct {
 	CertificateHash                         crypto.Hash
 	SignedPropertiesHash                    crypto.Hash
 	KeyInfoHash                             crypto.Hash // 0 to disable adding Reference to KeyInfo
+	KeyInfoCanonicalizer                    dsig.Canonicalizer
 	SignedInfoCanonicalizer                 dsig.Canonicalizer
 	SignedInfoHash                          crypto.Hash
 	IncludeRSAKeyValue                      bool

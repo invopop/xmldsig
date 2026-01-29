@@ -370,13 +370,14 @@ func (s *Signature) buildSignedInfo() error {
 	ns := s.opts.namespaces.Add(DSig, NamespaceDSig)
 
 	// Add key info digest, if enabled
-	if s.opts.xadesOptions.KeyInfoHash != 0 {
-		keyInfoHash := s.opts.xadesOptions.KeyInfoHash
+	keyInfoCanonicalizer := s.opts.xadesOptions.KeyInfoCanonicalizer
+	keyInfoHash := s.opts.xadesOptions.KeyInfoHash
+	if keyInfoHash != 0 && keyInfoCanonicalizer != nil {
 		keyInfoBytes, err := xml.Marshal(s.KeyInfo)
 		if err != nil {
 			return fmt.Errorf("marshal key info: %w", err)
 		}
-		canonicalizedKeyInfo, err := canonicalizeWith(keyInfoBytes, ns, dsig.MakeC14N10RecCanonicalizer()) // TODO make configurable
+		canonicalizedKeyInfo, err := canonicalizeWith(keyInfoBytes, ns, keyInfoCanonicalizer)
 		if err != nil {
 			return fmt.Errorf("canonicalize key info: %w", err)
 		}

@@ -8,14 +8,53 @@ Partial implementation of the XML DSig and XAdES standards for Go. Accepts certi
 [![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
 ![Latest Tag](https://img.shields.io/github/v/tag/invopop/xmldsig)
 
-## Predefined settings
+## Available settings
 
-The library supports multiple configuration options. For convenience, there are predefined settings:
+The library supports multiple configuration options. It's possible to specify options such as:
+
+- whether to attach QualifyingProperties element (XAdES) or not (XML DSig but without XAdES)
+- custom XML elements to include in SignedProperties and SignedSignatureProperties (some APIs require it, some don't)
+- what canonicalizers to use
+- what hashes to use
+- whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
+- whether to include RSA key value in KeyInfo (some APIs require it, some don't)
+
+For convenience, there are **predefined** settings:
 
 - `xmldsig.WithFacturaE` - Spanish FacturaE
 - `xmldsig.WithKSeF` - Polish KSeF
 
-For other standards, provide appropriate settings using the generic `xmldsig.WithRawOptions` method.
+For other APIs, it's possible to provide appropriate settings by creating a struct of type `xmldsig.XAdESOptions` manually, and passing it to `xmldsig.WithRawOptions` method.
+
+### Example of custom configuration
+
+```go
+	return XAdESOptions{
+		AttachQualifyingProperties:              true,                              // Whether to attach QualifyingProperties element, containing XAdES-specific elements
+		SignedSignaturePropertiesCustomElements: nil,                               // Custom elements to include in SignedSignatureProperties (nil to skip)
+		SignedPropertiesCustomElements:          nil,                               // Custom elements to include in SignedProperties (nil to skip)
+		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the outermost element (inclusive and exclusive canonicalizers work identically anyway)
+		DataHash:                                crypto.SHA512,                     // Hash algorithm for hashing the outermost element - the hash will then be included in a Reference element
+		TimestampFormatter:                      customTimestampFormatter,          // Timestamp formatter for the Timestamp element
+		IssuerSerializer:                        nil,                               // Serializer for the Issuer element in SignedProperties, containing information about certificate issuer (nil for default one)
+		SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the SignedProperties element
+		SignedPropertiesHash:                    crypto.SHA512,											// Hash algorithm for the SignedProperties element
+		CertificateHash:                         crypto.SHA512, 										// Hash algorithm for the certificate, for xades:CertDigest element
+		KeyInfoCanonicalizer:                    nil, 															// Canonicalization algorithm for the KeyInfo element - must be non-nil to add reference to KeyInfo in SignedInfo
+		KeyInfoHash:                             0, 																// Hash algorithm for the KeyInfo element - must be non-zero to add reference to KeyInfo in SignedInfo
+		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the SignedInfo element
+		SignedInfoHash:                          crypto.SHA256,											// Hash algorithm for the SignedInfo element
+		IncludeRSAKeyValue:                      false, 														// Whether to include RSA key value in KeyInfo
+	}
+```
+
+Example of a custom timestamp formatter:
+
+```go
+func customTimestampFormatter(t time.Time) string {
+	return t.UTC().Format("2006-01-02T15:04:05.0000000+00:00")
+}
+```
 
 ## Usage Example
 
@@ -94,6 +133,8 @@ Support is also included for using a Time Stamp Authority (TSA). Simply add the 
 ```go
 xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA) // uses https://freetsa.org/tsr
 ```
+
+Using this option requires `AttachQualifyingProperties` to be true, as the timestamp is added to `QualifyingProperties` > `UnsignedProperties` > `SignatureTimestamp` element.
 
 ## Certificates
 
