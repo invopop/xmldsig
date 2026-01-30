@@ -165,6 +165,11 @@ func (cert *Certificate) SerialNumber() string {
 	return cert.certificate.SerialNumber.String()
 }
 
+// PublicKeyAlgorithm exposes the public key algorithm of the certificate.
+func (cert *Certificate) PublicKeyAlgorithm() x509.PublicKeyAlgorithm {
+	return cert.certificate.PublicKeyAlgorithm
+}
+
 // PrivateKeyInfo is the  RSA private key info
 func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
 	privateKey, ok := cert.privateKey.(*rsa.PrivateKey)

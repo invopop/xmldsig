@@ -24,16 +24,6 @@ const (
 	DSig  = "ds"
 )
 
-// Supported signing algorithms URIs.
-const (
-	AlgDSigRSASHA224     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha224"
-	AlgDSigRSASHA256     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
-	AlgDSigRSASHA384     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384"
-	AlgDSigRSASHA512     = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
-	AlgDSigRSASHA512_224 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512/224"
-	AlgDSigRSASHA512_256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512/256"
-)
-
 // Signature contains the complete signature to be added
 // to the document.
 type Signature struct {
@@ -320,7 +310,7 @@ func (s *Signature) buildKeyInfo() {
 // buildSignedInfo will add namespaces to the original properties
 // as part of canonicalization, so we expect copies here.
 func (s *Signature) buildSignedInfo() error {
-	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xadesOptions.SignedInfoHash)
+	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xadesOptions.SignedInfoHash, s.opts.cert.PublicKeyAlgorithm())
 	if err != nil {
 		return fmt.Errorf("signature method: %w", err)
 	}
