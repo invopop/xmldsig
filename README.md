@@ -24,7 +24,7 @@ For convenience, there are **predefined** settings:
 - `xmldsig.WithFacturaE` - Spanish FacturaE
 - `xmldsig.WithKSeF` - Polish KSeF
 
-For other APIs, it's possible to provide appropriate settings by creating a struct of type `xmldsig.XAdESOptions` manually, and passing it to `xmldsig.WithRawOptions` method.
+For other APIs, it's possible to provide appropriate settings by creating a struct of type `xmldsig.XAdESOptions` manually, and passing it to `xmldsig.WithRawOptions` method. Note that using `xmldsig.WithRawOptions` is not compatible with using a predefined setting.
 
 ### Example of custom configuration
 
