@@ -18,7 +18,7 @@ Available options are in struct having type `xmldsig.XAdESOptions`. Here's a lis
 | `KeyInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `KeyInfo`; must be set along with `KeyInfoHash` to add `KeyInfo` to `SignedInfo` > `Reference` | `nil` | Inclusive C14N10 | `nil` |
 | `SignedInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | Inclusive C14N10 | Inclusive C14N10 | Inclusive C14N10 |
 | `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | SHA256 | SHA256 | SHA256 |
-| `IncludeRSAKeyValue` | `bool` | Whether to include RSA key value in `KeyInfo` | `false` | `true` | `false` |
+| `IncludeKeyValue` | `bool` | Whether to include the public key value (RSA or ECDSA) in `KeyInfo` | `false` | `true` | `false` |
 
 API-specific functions returning `xmldsig.XAdESOptions` (`xmldsig.WithFacturaE`, `xmldsig.WithKSeF`, more in the future) will include functions for filling certain struct fields with API-specific requirements, as appropriate.
 

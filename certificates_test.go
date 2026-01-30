@@ -4,7 +4,7 @@ import (
 	"crypto"
 	"testing"
 
-	"github.com/invopop/xmldsig"
+	"github.com/MieszkoGulinski/xmldsig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,6 +68,7 @@ func TestCertificateData(t *testing.T) {
 	t.Run("should return the certificate private key info", func(t *testing.T) {
 		privateKeyInfo := certificate.PrivateKeyInfo()
 
+		assert.Equal(t, xmldsig.KeyAlgorithmRSA, privateKeyInfo.Algorithm)
 		assert.Equal(t, "ujAnB2L5X2Bm42S5f/axKFu1QsAcZGJAeYELZZJ04jriBu3E8V3Rus3tUxfQ+ylqBm0bNWgHfP+gekosHaYoJNQmAVBuwpd183uHksTRUtbeOAFS2xd7v29stM7ARkec+WVV+SK8G6HECIB0VIAMoB2tVs0y6XRVRcjE4I7kH1h3ZbMIzvW43B4hxruYtXcvozGwvZpxQKVrjEY8IXH5+aXHM8WLCba4I06FyhvI+2/9WUPN2YvDoml7lQM4edgepTEZifq2ZPHGpCC5NhSXj2ab5FtnGTMgUaWH6tCljT0kOdfJBOHnIWOw4dBdgkik2CuxwGyMrq/P5VqQIC2hXQ==", privateKeyInfo.Modulus)
 		assert.Equal(t, "AQAB", privateKeyInfo.Exponent)
 	})
@@ -81,5 +82,15 @@ func TestECCertificateLoader(t *testing.T) {
 		signature, err := certificate.Sign("ec certificate payload", crypto.SHA256)
 		require.NoError(t, err)
 		assert.NotEmpty(t, signature)
+	})
+
+	t.Run("should expose ECDSA key info", func(t *testing.T) {
+		privateKeyInfo := certificate.PrivateKeyInfo()
+		require.NotNil(t, privateKeyInfo)
+		assert.Equal(t, xmldsig.KeyAlgorithmECDSA, privateKeyInfo.Algorithm)
+		assert.Equal(t, "urn:oid:1.2.840.10045.3.1.7", privateKeyInfo.CurveURI)
+		assert.NotEmpty(t, privateKeyInfo.PublicKey)
+		assert.Empty(t, privateKeyInfo.Modulus)
+		assert.Empty(t, privateKeyInfo.Exponent)
 	})
 }

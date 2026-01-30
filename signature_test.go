@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/invopop/xmldsig"
+	"github.com/MieszkoGulinski/xmldsig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

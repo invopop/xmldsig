@@ -2,6 +2,8 @@ package xmldsig
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -30,10 +32,28 @@ type Certificate struct {
 	issuer      *pkix.RDNSequence
 }
 
-// PrivateKeyInfo contains info about modulus and exponent of the key
+// KeyAlgorithm describes the public key algorithm exposed via PrivateKeyInfo.
+type KeyAlgorithm string
+
+const (
+	KeyAlgorithmUnknown KeyAlgorithm = ""
+	KeyAlgorithmRSA     KeyAlgorithm = "RSA"
+	KeyAlgorithmECDSA   KeyAlgorithm = "ECDSA"
+)
+
+// PrivateKeyInfo contains public information extracted from the private key.
+// Values are base64-encoded to match XML-DSig expectations when embedding
+// ds:KeyInfo payloads.
 type PrivateKeyInfo struct {
+	Algorithm KeyAlgorithm
+
+	// RSA fields
 	Modulus  string
 	Exponent string
+
+	// ECDSA fields
+	CurveURI  string
+	PublicKey string
 }
 
 // LoadCertificate creates a new Certificate instance from the info
@@ -170,21 +190,56 @@ func (cert *Certificate) PublicKeyAlgorithm() x509.PublicKeyAlgorithm {
 	return cert.certificate.PublicKeyAlgorithm
 }
 
-// PrivateKeyInfo is the  RSA private key info
+// PrivateKeyInfo exposes public components of the configured private key that
+// may be embedded in ds:KeyInfo blocks for interoperability.
 func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
-	privateKey, ok := cert.privateKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil
+	switch privateKey := cert.privateKey.(type) {
+	case *rsa.PrivateKey:
+		exponentBytes := make([]byte, 3)
+		exponentBytes[0] = byte(privateKey.E >> 16)
+		exponentBytes[1] = byte(privateKey.E >> 8)
+		exponentBytes[2] = byte(privateKey.E)
+
+		return &PrivateKeyInfo{
+			Algorithm: KeyAlgorithmRSA,
+			Modulus:   base64.StdEncoding.EncodeToString(privateKey.N.Bytes()),
+			Exponent:  base64.StdEncoding.EncodeToString(exponentBytes),
+		}
+	case *ecdsa.PrivateKey:
+		curveURI := namedCurveURI(privateKey.Curve)
+		if curveURI == "" {
+			return nil
+		}
+		publicKey := elliptic.Marshal(privateKey.Curve, privateKey.X, privateKey.Y)
+		return &PrivateKeyInfo{
+			Algorithm: KeyAlgorithmECDSA,
+			CurveURI:  curveURI,
+			PublicKey: base64.StdEncoding.EncodeToString(publicKey),
+		}
 	}
 
-	exponentBytes := make([]byte, 3)
-	exponentBytes[0] = byte(privateKey.E >> 16)
-	exponentBytes[1] = byte(privateKey.E >> 8)
-	exponentBytes[2] = byte(privateKey.E)
+	return nil
+}
 
-	return &PrivateKeyInfo{
-		Modulus:  base64.StdEncoding.EncodeToString(privateKey.N.Bytes()),
-		Exponent: base64.StdEncoding.EncodeToString(exponentBytes),
+func namedCurveURI(curve elliptic.Curve) string {
+	if curve == nil {
+		return ""
+	}
+	params := curve.Params()
+	if params == nil {
+		return ""
+	}
+	switch params.Name {
+	case "P-224":
+		return "urn:oid:1.3.132.0.33"
+	case "P-256":
+		return "urn:oid:1.2.840.10045.3.1.7"
+	case "P-384":
+		return "urn:oid:1.3.132.0.34"
+	case "P-521":
+		return "urn:oid:1.3.132.0.35"
+	default:
+		return ""
 	}
 }
 

@@ -26,7 +26,7 @@ type XAdESOptions struct {
 	KeyInfoCanonicalizer                    dsig.Canonicalizer
 	SignedInfoCanonicalizer                 dsig.Canonicalizer
 	SignedInfoHash                          crypto.Hash
-	IncludeRSAKeyValue                      bool
+	IncludeKeyValue                         bool
 }
 
 // normalizeXAdESOptions fills missing values with defaults.

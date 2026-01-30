@@ -70,7 +70,7 @@ func facturaeXAdESOptions(config *FacturaEConfig) XAdESOptions {
 		KeyInfoCanonicalizer:                    dsig.MakeC14N10RecCanonicalizer(),
 		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(),
 		SignedInfoHash:                          crypto.SHA256,
-		IncludeRSAKeyValue:                      true,
+		IncludeKeyValue:                         true,
 	}
 }
 

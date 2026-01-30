@@ -34,7 +34,7 @@ func ksefXAdESOptions() XAdESOptions {
 		KeyInfoHash:                             0,
 		SignedInfoCanonicalizer:                 dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""), // inclusive works too
 		SignedInfoHash:                          crypto.SHA256,
-		IncludeRSAKeyValue:                      false,
+		IncludeKeyValue:                         false,
 	}
 }
 

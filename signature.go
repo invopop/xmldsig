@@ -13,8 +13,9 @@ import (
 
 // Namespaces used in XML-DSig and XAdES.
 const (
-	NamespaceXAdES = "http://uri.etsi.org/01903/v1.3.2#"
-	NamespaceDSig  = "http://www.w3.org/2000/09/xmldsig#"
+	NamespaceXAdES  = "http://uri.etsi.org/01903/v1.3.2#"
+	NamespaceDSig   = "http://www.w3.org/2000/09/xmldsig#"
+	NamespaceDSig11 = "http://www.w3.org/2009/xmldsig11#"
 )
 
 // XML namespace prefixes.
@@ -85,6 +86,8 @@ type KeyInfo struct {
 	XMLName xml.Name `xml:"ds:KeyInfo"`
 	ID      string   `xml:"Id,attr"`
 
+	DSig11Namespace string `xml:"xmlns:dsig11,attr,omitempty"`
+
 	X509Data *X509Data `xml:"ds:X509Data,omitempty"`
 	KeyValue *KeyValue `xml:"ds:KeyValue,omitempty"` // optional, some APIs require it
 }
@@ -94,10 +97,25 @@ type X509Data struct {
 	X509Certificate []string `xml:"ds:X509Certificate"`
 }
 
-// KeyValue contains the RSA public key (optional, only specific APIs require it)
+// KeyValue contains the public key (optional, only specific APIs require it)
 type KeyValue struct {
-	Modulus  string `xml:"ds:RSAKeyValue>ds:Modulus"`
-	Exponent string `xml:"ds:RSAKeyValue>ds:Exponent"`
+	// RSA (XMLDSIG 1.0)
+	Modulus  string `xml:"ds:RSAKeyValue>ds:Modulus,omitempty"`
+	Exponent string `xml:"ds:RSAKeyValue>ds:Exponent,omitempty"`
+
+	// EC (XMLDSIG 1.1)
+	EC *ECKeyValue `xml:"dsig11:ECKeyValue,omitempty"`
+}
+
+type ECKeyValue struct {
+	XMLName xml.Name `xml:"dsig11:ECKeyValue"`
+
+	NamedCurve NamedCurve `xml:"dsig11:NamedCurve"`
+	PublicKey  string     `xml:"dsig11:PublicKey"`
+}
+
+type NamedCurve struct {
+	URI string `xml:"URI,attr"`
 }
 
 // Object wraps the XAdES qualifying properties
@@ -290,12 +308,14 @@ func (s *Signature) buildKeyInfo() {
 		},
 	}
 
-	if s.opts.xadesOptions.IncludeRSAKeyValue {
+	if s.opts.xadesOptions.IncludeKeyValue {
 		privateKeyInfo := certificate.PrivateKeyInfo()
 		if privateKeyInfo != nil {
-			info.KeyValue = &KeyValue{
-				Modulus:  privateKeyInfo.Modulus,
-				Exponent: privateKeyInfo.Exponent,
+			if keyValue := buildKeyValue(privateKeyInfo); keyValue != nil {
+				info.KeyValue = keyValue
+				if privateKeyInfo.Algorithm == KeyAlgorithmECDSA {
+					info.DSig11Namespace = NamespaceDSig11
+				}
 			}
 		}
 	}
@@ -305,6 +325,31 @@ func (s *Signature) buildKeyInfo() {
 	}
 
 	s.KeyInfo = info
+}
+
+func buildKeyValue(info *PrivateKeyInfo) *KeyValue {
+	switch info.Algorithm {
+	case KeyAlgorithmRSA:
+		if info.Modulus == "" || info.Exponent == "" {
+			return nil
+		}
+		return &KeyValue{
+			Modulus:  info.Modulus,
+			Exponent: info.Exponent,
+		}
+	case KeyAlgorithmECDSA:
+		if info.CurveURI == "" || info.PublicKey == "" {
+			return nil
+		}
+		return &KeyValue{
+			EC: &ECKeyValue{
+				NamedCurve: NamedCurve{URI: info.CurveURI},
+				PublicKey:  info.PublicKey,
+			},
+		}
+	default:
+		return nil
+	}
 }
 
 // buildSignedInfo will add namespaces to the original properties

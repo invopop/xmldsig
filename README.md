@@ -2,11 +2,11 @@
 
 Partial implementation of the XML DSig and XAdES standards for Go. Accepts certificates in .p12/.pfx format and generates signatures typically used with UBL invoice documents or similar local standards.
 
-[![Lint](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml)
-[![Test Go](https://github.com/invopop/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/test.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/invopop/xmldsig)](https://goreportcard.com/report/github.com/invopop/xmldsig)
-[![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
-![Latest Tag](https://img.shields.io/github/v/tag/invopop/xmldsig)
+[![Lint](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/lint.yaml)
+[![Test Go](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/test.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/MieszkoGulinski/xmldsig)](https://goreportcard.com/report/github.com/MieszkoGulinski/xmldsig)
+[![GoDoc](https://godoc.org/github.com/MieszkoGulinski/xmldsig?status.svg)](https://godoc.org/github.com/MieszkoGulinski/xmldsig)
+![Latest Tag](https://img.shields.io/github/v/tag/MieszkoGulinski/xmldsig)
 
 ## Available settings
 
@@ -17,7 +17,7 @@ The library supports multiple configuration options. It's possible to specify op
 - what canonicalizers to use
 - what hashes to use
 - whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
-- whether to include RSA key value in KeyInfo (some APIs require it, some don't)
+- whether to include the public key value (RSA or ECDSA) in KeyInfo (some APIs require it, some don't)
 
 For convenience, there are **predefined** settings:
 
@@ -44,7 +44,7 @@ For other APIs, it's possible to provide appropriate settings by creating a stru
 		KeyInfoHash:                             0, 																// Hash algorithm for the KeyInfo element - must be non-zero to add reference to KeyInfo in SignedInfo
 		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the SignedInfo element
 		SignedInfoHash:                          crypto.SHA256,											// Hash algorithm for the SignedInfo element
-		IncludeRSAKeyValue:                      false, 														// Whether to include RSA key value in KeyInfo
+		IncludeKeyValue:                         false, 														// Whether to include the public key value (RSA or ECDSA) in KeyInfo
 	}
 ```
 
