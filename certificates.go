@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
 
@@ -64,6 +65,11 @@ func LoadCertificate(path, password string) (*Certificate, error) {
 		return nil, fmt.Errorf("loading certificate: %w", err)
 	}
 
+	return LoadCertificateFromBytes(data, password)
+}
+
+// LoadCertificateFromBytes creates a new Certificate instance from PKCS12 bytes
+func LoadCertificateFromBytes(data []byte, password string) (*Certificate, error) {
 	privateKey, certificate, caChain, err := pkcs12.DecodeChain(data, password)
 	if err != nil {
 		return nil, err
@@ -107,7 +113,48 @@ func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
 	if signingErr != nil {
 		return "", signingErr
 	}
+
+	// For ECDSA signatures, convert from ASN.1 DER format to XML-DSig format (R||S)
+	if ecKey, ok := cert.privateKey.(*ecdsa.PrivateKey); ok {
+		signature, err := ecdsaSignatureToXMLDSig(signature, ecKey.Curve)
+		if err != nil {
+			return "", fmt.Errorf("failed to convert ECDSA signature: %w", err)
+		}
+		return base64.StdEncoding.EncodeToString(signature), nil
+	}
+
 	return base64.StdEncoding.EncodeToString(signature), nil
+}
+
+// ecdsaSignatureToXMLDSig converts an ASN.1 DER encoded ECDSA signature to
+// XML-DSig format (concatenated R||S with fixed size).
+func ecdsaSignatureToXMLDSig(asn1Sig []byte, curve elliptic.Curve) ([]byte, error) {
+	// Parse ASN.1 signature
+	var sig struct {
+		R, S *big.Int
+	}
+	_, err := asn1.Unmarshal(asn1Sig, &sig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ASN.1 signature: %w", err)
+	}
+
+	// Get curve parameters to determine field size
+	curveOrderByteSize := (curve.Params().BitSize + 7) / 8
+
+	// Convert R and S to fixed-size byte arrays
+	rBytes := sig.R.Bytes()
+	sBytes := sig.S.Bytes()
+
+	// Create signature buffer (R || S)
+	signature := make([]byte, 2*curveOrderByteSize)
+
+	// Copy R with zero-padding on the left if needed
+	copy(signature[curveOrderByteSize-len(rBytes):curveOrderByteSize], rBytes)
+
+	// Copy S with zero-padding on the left if needed
+	copy(signature[2*curveOrderByteSize-len(sBytes):], sBytes)
+
+	return signature, nil
 }
 
 // Fingerprint returns the requested hash of the certificate bytes.
@@ -136,13 +183,16 @@ func (cert *Certificate) PEM() []byte {
 	return PEMCertificate(cert.certificate)
 }
 
-// PrivateKey provides the private key in PEM format, if it's a RSA key.
+// PrivateKey provides the private key in PEM format for both RSA and ECDSA keys.
 func (cert *Certificate) PrivateKey() []byte {
-	privateKey, ok := cert.privateKey.(*rsa.PrivateKey)
-	if !ok {
+	switch key := cert.privateKey.(type) {
+	case *rsa.PrivateKey:
+		return PEMPrivateRSAKey(key)
+	case *ecdsa.PrivateKey:
+		return PEMPrivateECDSAKey(key)
+	default:
 		return nil
 	}
-	return PEMPrivateRSAKey(privateKey)
 }
 
 // NakedPEM converts a x509 formated certificate to the PEM format without
@@ -171,6 +221,19 @@ func PEMPrivateRSAKey(key *rsa.PrivateKey) []byte {
 	pb := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	}
+	return pem.EncodeToMemory(pb)
+}
+
+// PEMPrivateECDSAKey issues a PEM string with the ECDSA Key.
+func PEMPrivateECDSAKey(key *ecdsa.PrivateKey) []byte {
+	keyBytes, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil
+	}
+	pb := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyBytes,
 	}
 	return pem.EncodeToMemory(pb)
 }
@@ -247,10 +310,14 @@ func namedCurveURI(curve elliptic.Curve) string {
 // with HTTP servers that require them in addition to the signatures of the
 // XML-DSig signed payload.
 func (cert *Certificate) TLSAuthConfig() (*tls.Config, error) {
-	pair, err := tls.X509KeyPair(cert.PEM(), cert.PrivateKey())
-	if err != nil {
-		return nil, err
+	// Build tls.Certificate directly using the crypto.Signer interface
+	// This works for both RSA and ECDSA keys
+	pair := tls.Certificate{
+		Certificate: [][]byte{cert.certificate.Raw},
+		PrivateKey:  cert.privateKey,
+		Leaf:        cert.certificate,
 	}
+
 	rootCAs := x509.NewCertPool()
 	for _, c := range cert.CaChain {
 		rootCAs.AddCert(c)
