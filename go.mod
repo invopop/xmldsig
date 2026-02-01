@@ -1,4 +1,4 @@
-module github.com/MieszkoGulinski/xmldsig
+module github.com/invopop/xmldsig
 
 go 1.23.0
 

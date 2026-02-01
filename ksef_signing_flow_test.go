@@ -12,8 +12,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/MieszkoGulinski/xmldsig"
 	"github.com/beevik/etree"
+	"github.com/invopop/xmldsig"
 	dsig "github.com/russellhaering/goxmldsig"
 	"github.com/stretchr/testify/require"
 )
