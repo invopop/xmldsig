@@ -14,18 +14,21 @@ func TestFacturaeXMLDSigOptions(t *testing.T) {
 }
 
 func TestFacturaeXAdESOptionsIncludesPolicyRoleAndDataObject(t *testing.T) {
-	cfg := FacturaEConfig{
+	policy := &XAdESPolicyConfig{
+		URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
+		Description: "Política de Firma FacturaE v3.1",
+		Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
+		Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
+	}
+	inputOpts := XAdESOptions{
 		Role:        XAdESSignerRole("issuer"),
 		Description: "FacturaE data object",
-		Policy: &XAdESPolicyConfig{
-			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
-			Description: "Política de Firma FacturaE v3.1",
-			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
-			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
-		},
+		Policy:      policy,
 	}
-	opts := FacturaeXAdESOptions(cfg)
+
+	opts := FacturaeXAdESOptions(inputOpts)
 	opts = *normalizeXAdESOptions(&opts)
+
 	if opts.TimestampFormatter == nil {
 		t.Fatalf("expected TimestampFormatter to be set")
 	}
@@ -35,35 +38,31 @@ func TestFacturaeXAdESOptionsIncludesPolicyRoleAndDataObject(t *testing.T) {
 	if opts.SignedPropertiesCanonicalizer == nil {
 		t.Fatalf("expected SignedPropertiesCanonicalizer to be set")
 	}
-	if opts.Role == nil || len(*opts.Role) != 1 || (*opts.Role)[0] != cfg.Role.String() {
-		t.Fatalf("expected Role slice to be populated, got %+v", opts.Role)
+
+	if opts.Role != inputOpts.Role {
+		t.Fatalf("expected Role to be %q, got %q", inputOpts.Role, opts.Role)
 	}
-	if opts.PolicyIdentifier == nil {
-		t.Fatalf("expected PolicyIdentifier to be set")
+
+	if opts.Policy == nil {
+		t.Fatalf("expected Policy to be set")
 	}
-	if opts.PolicyIdentifier.SignaturePolicyID == nil {
-		t.Fatalf("expected SignaturePolicyID to be set")
+	if opts.Policy.URL != policy.URL {
+		t.Fatalf("expected Policy URL to be %s, got %s", policy.URL, opts.Policy.URL)
 	}
-	if opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Identifier.Value != cfg.Policy.URL {
-		t.Fatalf("unexpected policy identifier: %+v", opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Identifier)
+	if opts.Policy.Description != policy.Description {
+		t.Fatalf("expected Policy Description to be %s, got %s", policy.Description, opts.Policy.Description)
 	}
-	if opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Description != cfg.Policy.Description {
-		t.Fatalf("unexpected policy description: %s", opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Description)
+	if opts.Policy.Algorithm != policy.Algorithm {
+		t.Fatalf("expected Policy Algorithm to be %s, got %s", policy.Algorithm, opts.Policy.Algorithm)
 	}
-	hash := opts.PolicyIdentifier.SignaturePolicyID.SigPolicyHash
-	if hash == nil {
-		t.Fatalf("expected policy hash to be set")
+	if opts.Policy.Hash != policy.Hash {
+		t.Fatalf("expected Policy Hash to be %s, got %s", policy.Hash, opts.Policy.Hash)
 	}
-	if hash.DigestMethod == nil || hash.DigestMethod.Algorithm != cfg.Policy.Algorithm {
-		t.Fatalf("unexpected policy algorithm: %v", hash.DigestMethod)
-	}
-	if hash.DigestValue != cfg.Policy.Hash {
-		t.Fatalf("unexpected policy hash: %s", hash.DigestValue)
-	}
+
 	if opts.DataObjectFormat == nil {
 		t.Fatalf("expected DataObjectFormat to be set")
 	}
-	if opts.DataObjectFormat.Description != cfg.Description {
+	if opts.DataObjectFormat.Description != inputOpts.Description {
 		t.Fatalf("unexpected DataObjectFormat description: %s", opts.DataObjectFormat.Description)
 	}
 	if opts.DataObjectFormat.MimeType != "text/xml" {

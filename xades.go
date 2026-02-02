@@ -154,7 +154,7 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 		SigningTime:               s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()),
 		SigningCertificate:        signingCertificate,
 		SignerRole:                buildSignerRole(s.opts.xadesOptions.Role),
-		SignaturePolicyIdentifier: s.opts.xadesOptions.PolicyIdentifier,
+		SignaturePolicyIdentifier: buildPolicyIdentifier(s.opts.xadesOptions.Policy),
 	}
 
 	signedProps := &SignedProperties{
@@ -178,23 +178,36 @@ func (s *Signature) serializeIssuer(cert *Certificate) string {
 	return cert.Issuer()
 }
 
-func buildSignerRole(roles *[]string) *SignerRole {
-	if roles == nil {
-		return nil
-	}
-	roleValues := make([]string, 0, len(*roles))
-	for _, r := range *roles {
-		if r == "" {
-			continue
-		}
-		roleValues = append(roleValues, r)
-	}
-	if len(roleValues) == 0 {
+func buildSignerRole(role XAdESSignerRole) *SignerRole {
+	if role == "" {
 		return nil
 	}
 	return &SignerRole{
 		ClaimedRoles: &ClaimedRoles{
-			ClaimedRole: roleValues,
+			ClaimedRole: []string{string(role)},
+		},
+	}
+}
+
+func buildPolicyIdentifier(policy *XAdESPolicyConfig) *PolicyIdentifier {
+	if policy == nil {
+		return nil
+	}
+
+	return &PolicyIdentifier{
+		SignaturePolicyID: &PolicySignaturePolicyID{
+			SigPolicyID: PolicySigPolicyID{
+				Identifier: Identifier{
+					Value: policy.URL,
+				},
+				Description: policy.Description,
+			},
+			SigPolicyHash: &PolicySigPolicyHash{
+				DigestMethod: &AlgorithmMethod{
+					Algorithm: policy.Algorithm,
+				},
+				DigestValue: policy.Hash,
+			},
 		},
 	}
 }

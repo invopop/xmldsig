@@ -108,10 +108,7 @@ func TestWithXMLDSigOptions(t *testing.T) {
 
 func TestWithXAdESOptions(t *testing.T) {
 	raw := XAdESOptions{
-		Role: func() *[]string {
-			roles := []string{"issuer"}
-			return &roles
-		}(),
+		Role: XAdESSignerRole("issuer"),
 	}
 	opt := WithXAdESOptions(raw)
 	o := &options{}
@@ -121,7 +118,7 @@ func TestWithXAdESOptions(t *testing.T) {
 	if o.xadesOptions == nil {
 		t.Fatal("expected xadesOptions to be set")
 	}
-	if o.xadesOptions.Role == nil || len(*o.xadesOptions.Role) != 1 || (*o.xadesOptions.Role)[0] != "issuer" {
+	if o.xadesOptions.Role != "issuer" {
 		t.Fatalf("expected Role to be cloned, got %+v", o.xadesOptions.Role)
 	}
 }
