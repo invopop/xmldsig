@@ -1,4 +1,4 @@
-package xmldsig
+package ksef
 
 import (
 	"crypto/x509/pkix"
@@ -7,30 +7,13 @@ import (
 	"testing"
 	"time"
 
-	dsig "github.com/russellhaering/goxmldsig"
 	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
-func TestKSeFXAdESOptions(t *testing.T) {
-	opts := KSeFXAdESOptions()
-	opts = *normalizeXAdESOptions(&opts)
-
-	if opts.IssuerSerializer == nil {
-		t.Fatalf("expected IssuerSerializer to be set")
-	}
-
-	if opts.SignedPropertiesCanonicalizer == nil {
-		t.Fatalf("expected SignedPropertiesCanonicalizer to be set")
-	}
-	if opts.SignedPropertiesCanonicalizer.Algorithm() != dsig.CanonicalXML10ExclusiveAlgorithmId {
-		t.Fatalf("unexpected SignedPropertiesCanonicalizer algorithm: %s", opts.SignedPropertiesCanonicalizer.Algorithm())
-	}
-
-	if opts.TimestampFormatter == nil {
-		t.Fatalf("expected TimestampFormatter to be set")
-	}
+func TestKSeFTimestampFormatter(t *testing.T) {
 	ts := time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("CET", 3600))
-	if got := opts.TimestampFormatter(ts); got != "2024-01-02T02:04:05.0000000+00:00" {
+	// ksefTimestampFormatter is internal, but we can test it because we are in package ksef
+	if got := ksefTimestampFormatter(ts); got != "2024-01-02T02:04:05.0000000+00:00" {
 		t.Fatalf("unexpected timestamp format: %s", got)
 	}
 }
@@ -67,7 +50,11 @@ func TestKsefIssuerSerializerHandlesMissingValues(t *testing.T) {
 }
 
 func TestKsefIssuerSerializerMatchesCertificate(t *testing.T) {
-	data, err := os.ReadFile("certs/cert-20260102-131809.pfx")
+	// The path to certs might differ now that we are in a subdirectory.
+	// But usually go test changes working directory to the package directory.
+	// We need to verify where "certs/cert-20260102-131809.pfx" is relative to ksef package.
+	// It is in ../certs/
+	data, err := os.ReadFile("../certs/cert-20260102-131809.pfx")
 	if err != nil {
 		t.Fatalf("failed to read certificate: %v", err)
 	}

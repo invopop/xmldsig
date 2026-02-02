@@ -1,16 +1,18 @@
-package xmldsig
+package ksef
 
 import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
 	"time"
+
+	"github.com/MieszkoGulinski/xmldsig"
 )
 
-// KSeFXAdESOptions returns the KSeF-specific XAdES configuration.
-func KSeFXAdESOptions() XAdESOptions {
+// XAdESOptions returns the KSeF-specific XAdES configuration.
+func XAdESOptions() xmldsig.XAdESOptions {
 	// List of allowed canonicalizers: https://github.com/CIRFMF/ksef-docs/blob/main/auth/podpis-xades.md
-	return XAdESOptions{
+	return xmldsig.XAdESOptions{
 		TimestampFormatter: ksefTimestampFormatter,
 		IssuerSerializer:   ksefIssuerSerializer,
 	}

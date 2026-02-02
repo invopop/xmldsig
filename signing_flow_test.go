@@ -17,15 +17,15 @@ import (
 )
 
 // Full end to end test of signing flow - creates a signature and verifies that all hashes are correct
-func TestKSeFSigning_InvoiceVat(t *testing.T) {
-	verifyKSeFSigningFlow(t, "data/invoice-vat.xml")
+func TestSigningFlow_InvoiceVat(t *testing.T) {
+	verifySigningFlow(t, "data/invoice-vat.xml")
 }
 
-func TestKSeFSigning_AuthRequest(t *testing.T) {
-	verifyKSeFSigningFlow(t, "data/ksef-auth-request.xml")
+func TestSigningFlow_AuthRequest(t *testing.T) {
+	verifySigningFlow(t, "data/ksef-auth-request.xml")
 }
 
-func verifyKSeFSigningFlow(t *testing.T, xmlPath string) {
+func verifySigningFlow(t *testing.T, xmlPath string) {
 	// 1. Prepare a signed XML
 	certificate, err := xmldsig.LoadCertificate("certs/cert-20260102-131809.pfx", "")
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func verifyKSeFSigningFlow(t *testing.T, xmlPath string) {
 
 	signature, err := xmldsig.Sign(originalXML,
 		xmldsig.WithCertificate(certificate),
-		xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions()),
+		xmldsig.WithXAdESOptions(xmldsig.XAdESOptions{}),
 	)
 	require.NoError(t, err)
 

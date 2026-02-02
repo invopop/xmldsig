@@ -20,8 +20,8 @@ The library supports multiple configuration options. It's possible to specify op
 
 For convenience, there are **predefined option builders**:
 
-- `xmldsig.FacturaeXMLDSigOptions()` together with `xmldsig.FacturaeXAdESOptions()` for Spanish FacturaE
-- `xmldsig.KSeFXAdESOptions()` for Polish KSeF (XMLDSig defaults already match the profile)
+- `facturae.XMLDSigOptions()` together with `facturae.XAdESOptions()` for Spanish FacturaE
+- `ksef.XAdESOptions()` for Polish KSeF (XMLDSig defaults already match the profile)
 
 For other APIs, it's possible to provide appropriate settings by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESOptions`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdESOptions` respectively. Using these functions is not compatible with predefined settings.
 
@@ -86,7 +86,7 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	authTokenRequest.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions()),
+		xmldsig.WithXAdESOptions(ksef.XAdESOptions()),
 	)
 
 	// Now output the data
@@ -111,10 +111,10 @@ func main() {
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	facturaeOptions := xmldsig.FacturaEConfig{
+	facturaeOptions := xmldsig.XAdESOptions{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
-		Policy: &xmldsig.FacturaEPolicyConfig{
+		Policy: &xmldsig.XAdESPolicyConfig{
 			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
 			Description: "Política de Firma FacturaE v3.1",
 			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
@@ -125,8 +125,8 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXMLDSigOptions(xmldsig.FacturaeXMLDSigOptions()),
-		xmldsig.WithXAdESOptions(xmldsig.FacturaeXAdESOptions(facturaeOptions)),
+		xmldsig.WithXMLDSigOptions(facturae.XMLDSigOptions()),
+		xmldsig.WithXAdESOptions(facturae.XAdESOptions(facturaeOptions)),
 	)
 
 	// Now output the data
@@ -175,8 +175,8 @@ Before this change, the library was performing canonicalization on the signed da
 
 ### Updated methods
 
-- `xmldsig.WithXAdES` and `xmldsig.WithFacturaE` have been replaced by the combination of `xmldsig.WithXMLDSigOptions(xmldsig.FacturaeXMLDSigOptions())` and `xmldsig.WithXAdESOptions(xmldsig.FacturaeXAdESOptions(...))`.
-- `xmldsig.WithKSeF` has been replaced by `xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions())` (XMLDSig defaults already meet the KSeF requirements).
+- `xmldsig.WithXAdES` and `xmldsig.WithFacturaE` have been replaced by the combination of `xmldsig.WithXMLDSigOptions(facturae.XMLDSigOptions())` and `xmldsig.WithXAdESOptions(facturae.XAdESOptions(...))`.
+- `xmldsig.WithKSeF` has been replaced by `xmldsig.WithXAdESOptions(ksef.XAdESOptions())` (XMLDSig defaults already meet the KSeF requirements).
 
 ## Copyright
 

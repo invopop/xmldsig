@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/MieszkoGulinski/xmldsig"
+	"github.com/MieszkoGulinski/xmldsig/facturae"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -142,8 +143,8 @@ func xadesConfig() xmldsig.XAdESOptions {
 }
 
 func facturaeOptions(cfg xmldsig.XAdESOptions) (xmldsig.Option, xmldsig.Option) {
-	return xmldsig.WithXMLDSigOptions(xmldsig.FacturaeXMLDSigOptions()),
-		xmldsig.WithXAdESOptions(xmldsig.FacturaeXAdESOptions(cfg))
+	return xmldsig.WithXMLDSigOptions(facturae.XMLDSigOptions()),
+		xmldsig.WithXAdESOptions(facturae.XAdESOptions(cfg))
 }
 
 func getCertificate() (*xmldsig.Certificate, error) {

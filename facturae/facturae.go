@@ -1,33 +1,34 @@
-package xmldsig
+package facturae
 
 import (
 	"crypto/x509/pkix"
 	"time"
 
+	"github.com/MieszkoGulinski/xmldsig"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// FacturaeXMLDSigOptions returns the XMLDSig defaults required by the FacturaE profile.
-func FacturaeXMLDSigOptions() XMLDSigOptions {
-	return XMLDSigOptions{
+// XMLDSigOptions returns the XMLDSig defaults required by the FacturaE profile.
+func XMLDSigOptions() xmldsig.XMLDSigOptions {
+	return xmldsig.XMLDSigOptions{
 		IncludeKeyValue:              true,
 		ReferenceKeyInfoInSignedInfo: true,
 	}
 }
 
-// FacturaeXAdESOptions builds the FacturaE-specific XAdES configuration from the provided config.
-func FacturaeXAdESOptions(opts XAdESOptions) XAdESOptions {
+// XAdESOptions builds the FacturaE-specific XAdES configuration from the provided config.
+func XAdESOptions(opts xmldsig.XAdESOptions) xmldsig.XAdESOptions {
 	opts.TimestampFormatter = facturaeTimestampFormatter
 	opts.IssuerSerializer = facturaeIssuerSerializer
 	opts.SignedPropertiesCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
 
 	if opts.DataObjectFormat == nil {
-		opts.DataObjectFormat = &DataObjectFormat{}
+		opts.DataObjectFormat = &xmldsig.DataObjectFormat{}
 	}
 	opts.DataObjectFormat.Description = opts.Description
 	opts.DataObjectFormat.MimeType = "text/xml"
-	opts.DataObjectFormat.ObjectIdentifier = &ObjectIdentifier{
-		Identifier: Identifier{
+	opts.DataObjectFormat.ObjectIdentifier = &xmldsig.ObjectIdentifier{
+		Identifier: xmldsig.Identifier{
 			Qualifier: "OIDAsURN",
 			Value:     "urn:oid:1.2.840.10003.5.109.10",
 		},
