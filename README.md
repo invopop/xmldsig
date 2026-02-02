@@ -29,12 +29,12 @@ For convenience, there are **predefined option builders**:
 
 ```go
 xmlOpts := xmldsig.XMLDSigOptions{
-	DataCanonicalizer:       dsig.MakeC14N10RecCanonicalizer(), // Canonicalize the XML that is signed
-	DataHash:                crypto.SHA512,                     // Hash algorithm for the signed XML
-	SignedInfoCanonicalizer: dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for SignedInfo
-	SignedInfoHash:          crypto.SHA256,                     // Hash algorithm for SignedInfo
-	IncludeKeyValue:         false,                             // Whether to include the public key in KeyInfo
-	ReferenceKeyInfoInSignedInfo: true,                         // Whether SignedInfo should reference KeyInfo
+	DataCanonicalizer:            dsig.MakeC14N10RecCanonicalizer(), // Canonicalize the XML that is signed
+	DataHash:                     crypto.SHA512,                     // Hash algorithm for the signed XML
+	SignedInfoCanonicalizer:      dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for SignedInfo
+	SignedInfoHash:               crypto.SHA256,                     // Hash algorithm for SignedInfo
+	IncludeKeyValue:              false,                             // Whether to include the public key in KeyInfo
+	ReferenceKeyInfoInSignedInfo: true,                              // Whether SignedInfo should reference KeyInfo
 	KeyInfoCanonicalizer:         dsig.MakeC14N10RecCanonicalizer(),
 	KeyInfoHash:                  crypto.SHA512,
 }
@@ -42,9 +42,9 @@ xmlOpts := xmldsig.XMLDSigOptions{
 xadesOpts := xmldsig.XAdESOptions{
 	TimestampFormatter:            customTimestampFormatter,          // Timestamp formatter for SigningTime
 	IssuerSerializer:              nil,                               // Serializer for issuer names, nil for default
-	SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(),
-	SignedPropertiesHash:                    crypto.SHA512,
-	SigningCertificateHash:                  crypto.SHA512,
+	SignedPropertiesCanonicalizer: dsig.MakeC14N10RecCanonicalizer(),
+	SignedPropertiesHash:          crypto.SHA512,
+	SigningCertificateHash:        crypto.SHA512,
 }
 
 signature, err := xmldsig.Sign(data,
