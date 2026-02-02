@@ -111,7 +111,7 @@ func main() {
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	facturaeOptions := &xmldsig.FacturaEConfig{
+	facturaeOptions := xmldsig.FacturaEConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.FacturaEPolicyConfig{

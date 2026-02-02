@@ -128,8 +128,8 @@ func TestSignature(t *testing.T) {
 	})
 }
 
-func xadesConfig() *xmldsig.FacturaEConfig {
-	return &xmldsig.FacturaEConfig{
+func xadesConfig() xmldsig.FacturaEConfig {
+	return xmldsig.FacturaEConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
@@ -141,7 +141,7 @@ func xadesConfig() *xmldsig.FacturaEConfig {
 	}
 }
 
-func facturaeOptions(cfg *xmldsig.FacturaEConfig) (xmldsig.Option, xmldsig.Option) {
+func facturaeOptions(cfg xmldsig.FacturaEConfig) (xmldsig.Option, xmldsig.Option) {
 	return xmldsig.WithXMLDSigOptions(xmldsig.FacturaeXMLDSigOptions()),
 		xmldsig.WithXAdESOptions(xmldsig.FacturaeXAdESOptions(cfg))
 }

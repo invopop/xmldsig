@@ -48,38 +48,42 @@ func FacturaeXMLDSigOptions() XMLDSigOptions {
 }
 
 // FacturaeXAdESOptions builds the FacturaE-specific XAdES configuration from the provided config.
-func FacturaeXAdESOptions(config *FacturaEConfig) XAdESOptions {
+func FacturaeXAdESOptions(config FacturaEConfig) XAdESOptions {
 	opts := XAdESOptions{
 		TimestampFormatter:            facturaeTimestampFormatter,
 		IssuerSerializer:              facturaeIssuerSerializer,
 		SignedPropertiesCanonicalizer: dsig.MakeC14N10RecCanonicalizer(),
 	}
 
-	if config != nil {
-		if config.Role != "" {
-			roles := []string{config.Role.String()}
-			opts.Role = &roles
-		}
-		opts.DataObjectFormat = &DataObjectFormat{
-			Description: config.Description,
-			ObjectIdentifier: &ObjectIdentifier{
-				Identifier: Identifier{
-					Qualifier: "OIDAsURN",
-					Value:     "urn:oid:1.2.840.10003.5.109.10",
-				},
+	roles := []string{config.Role.String()}
+	opts.Role = &roles
+	opts.DataObjectFormat = &DataObjectFormat{
+		Description: config.Description,
+		ObjectIdentifier: &ObjectIdentifier{
+			Identifier: Identifier{
+				Qualifier: "OIDAsURN",
+				Value:     "urn:oid:1.2.840.10003.5.109.10",
 			},
-			MimeType: "text/xml",
-		}
-		if config.Policy != nil {
-			opts.PolicyIdentifier = &PolicyIdentifier{
-				Identifier: Identifier{
-					Value: config.Policy.URL,
-				},
-				Description:           config.Policy.Description,
-				DigestMethodAlgorithm: config.Policy.Algorithm,
-				DigestValue:           config.Policy.Hash,
-			}
-		}
+		},
+		MimeType: "text/xml",
+	}
+
+	sigPolicyID := &PolicySignaturePolicyID{
+		SigPolicyID: PolicySigPolicyID{
+			Identifier: Identifier{
+				Value: config.Policy.URL,
+			},
+			Description: config.Policy.Description,
+		},
+		SigPolicyHash: &PolicySigPolicyHash{
+			DigestMethod: &AlgorithmMethod{
+				Algorithm: config.Policy.Algorithm,
+			},
+			DigestValue: config.Policy.Hash,
+		},
+	}
+	opts.PolicyIdentifier = &PolicyIdentifier{
+		SignaturePolicyID: sigPolicyID,
 	}
 
 	return opts

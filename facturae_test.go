@@ -14,7 +14,7 @@ func TestFacturaeXMLDSigOptions(t *testing.T) {
 }
 
 func TestFacturaeXAdESOptionsIncludesPolicyRoleAndDataObject(t *testing.T) {
-	cfg := &FacturaEConfig{
+	cfg := FacturaEConfig{
 		Role:        XAdESSignerRole("issuer"),
 		Description: "FacturaE data object",
 		Policy: &XAdESPolicyConfig{
@@ -41,17 +41,24 @@ func TestFacturaeXAdESOptionsIncludesPolicyRoleAndDataObject(t *testing.T) {
 	if opts.PolicyIdentifier == nil {
 		t.Fatalf("expected PolicyIdentifier to be set")
 	}
-	if opts.PolicyIdentifier.Identifier.Value != cfg.Policy.URL {
-		t.Fatalf("unexpected policy identifier: %+v", opts.PolicyIdentifier.Identifier)
+	if opts.PolicyIdentifier.SignaturePolicyID == nil {
+		t.Fatalf("expected SignaturePolicyID to be set")
 	}
-	if opts.PolicyIdentifier.Description != cfg.Policy.Description {
-		t.Fatalf("unexpected policy description: %s", opts.PolicyIdentifier.Description)
+	if opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Identifier.Value != cfg.Policy.URL {
+		t.Fatalf("unexpected policy identifier: %+v", opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Identifier)
 	}
-	if opts.PolicyIdentifier.DigestMethodAlgorithm != cfg.Policy.Algorithm {
-		t.Fatalf("unexpected policy algorithm: %s", opts.PolicyIdentifier.DigestMethodAlgorithm)
+	if opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Description != cfg.Policy.Description {
+		t.Fatalf("unexpected policy description: %s", opts.PolicyIdentifier.SignaturePolicyID.SigPolicyID.Description)
 	}
-	if opts.PolicyIdentifier.DigestValue != cfg.Policy.Hash {
-		t.Fatalf("unexpected policy hash: %s", opts.PolicyIdentifier.DigestValue)
+	hash := opts.PolicyIdentifier.SignaturePolicyID.SigPolicyHash
+	if hash == nil {
+		t.Fatalf("expected policy hash to be set")
+	}
+	if hash.DigestMethod == nil || hash.DigestMethod.Algorithm != cfg.Policy.Algorithm {
+		t.Fatalf("unexpected policy algorithm: %v", hash.DigestMethod)
+	}
+	if hash.DigestValue != cfg.Policy.Hash {
+		t.Fatalf("unexpected policy hash: %s", hash.DigestValue)
 	}
 	if opts.DataObjectFormat == nil {
 		t.Fatalf("expected DataObjectFormat to be set")

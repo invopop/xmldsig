@@ -31,10 +31,10 @@ type SignedProperties struct {
 
 // SignedSignatureProperties contains signer-specific statements such as SigningTime and SigningCertificate.
 type SignedSignatureProperties struct {
-	SigningTime               string                     `xml:"xades:SigningTime"`
-	SigningCertificate        *SigningCertificate        `xml:"xades:SigningCertificate"`
-	SignaturePolicyIdentifier *SignaturePolicyIdentifier `xml:"xades:SignaturePolicyIdentifier,omitempty"`
-	SignerRole                *SignerRole                `xml:"xades:SignerRole,omitempty"`
+	SigningTime               string              `xml:"xades:SigningTime"`
+	SigningCertificate        *SigningCertificate `xml:"xades:SigningCertificate"`
+	SignaturePolicyIdentifier *PolicyIdentifier   `xml:"xades:SignaturePolicyIdentifier,omitempty"`
+	SignerRole                *SignerRole         `xml:"xades:SignerRole,omitempty"`
 }
 
 // SigningCertificate encloses certificate details required by XAdES.
@@ -60,29 +60,6 @@ type IssuerSerial struct {
 	X509SerialNumber string `xml:"ds:X509SerialNumber"`
 }
 
-// SignaturePolicyIdentifier links to the policy governing the signature process.
-type SignaturePolicyIdentifier struct {
-	SignaturePolicyID *SignaturePolicyID `xml:"xades:SignaturePolicyId"`
-}
-
-// SignaturePolicyID contains the identifier and optional hash of the policy.
-type SignaturePolicyID struct {
-	SigPolicyID   *SigPolicyID   `xml:"xades:SigPolicyId"`
-	SigPolicyHash *SigPolicyHash `xml:"xades:SigPolicyHash,omitempty"`
-}
-
-// SigPolicyID holds the identifier and optional description of the policy.
-type SigPolicyID struct {
-	Identifier  Identifier `xml:"xades:Identifier"`
-	Description string     `xml:"xades:Description,omitempty"`
-}
-
-// SigPolicyHash carries the digest of the linked signature policy.
-type SigPolicyHash struct {
-	DigestMethod *AlgorithmMethod `xml:"ds:DigestMethod,omitempty"`
-	DigestValue  string           `xml:"ds:DigestValue,omitempty"`
-}
-
 // SignerRole enumerates claimed signer roles.
 type SignerRole struct {
 	ClaimedRoles *ClaimedRoles `xml:"xades:ClaimedRoles"`
@@ -96,6 +73,50 @@ type ClaimedRoles struct {
 // SignedDataObjectProperties describes signed objects such as the main document body.
 type SignedDataObjectProperties struct {
 	DataObjectFormat *DataObjectFormat `xml:"xades:DataObjectFormat"`
+}
+
+// DataObjectFormat describes the xades:DataObjectFormat element.
+type DataObjectFormat struct {
+	ObjectReference  string            `xml:"ObjectReference,attr"`
+	Description      string            `xml:"xades:Description,omitempty"`
+	ObjectIdentifier *ObjectIdentifier `xml:"xades:ObjectIdentifier,omitempty"`
+	MimeType         string            `xml:"xades:MimeType,omitempty"`
+	Encoding         string            `xml:"xades:Encoding,omitempty"`
+}
+
+// ObjectIdentifier configures xades:ObjectIdentifier element content.
+type ObjectIdentifier struct {
+	Identifier  Identifier `xml:"xades:Identifier"`
+	Description string     `xml:"xades:Description,omitempty"`
+}
+
+// Identifier is reused by multiple elements to represent string content with an optional qualifier attribute.
+type Identifier struct {
+	Qualifier string `xml:"Qualifier,attr,omitempty"`
+	Value     string `xml:",chardata"`
+}
+
+// PolicyIdentifier represents xades:SignaturePolicyIdentifier > xades:SignaturePolicyId.
+type PolicyIdentifier struct {
+	SignaturePolicyID *PolicySignaturePolicyID `xml:"xades:SignaturePolicyId"`
+}
+
+// PolicySignaturePolicyID contains the policy identifier and optional hash data.
+type PolicySignaturePolicyID struct {
+	SigPolicyID   PolicySigPolicyID    `xml:"xades:SigPolicyId"`
+	SigPolicyHash *PolicySigPolicyHash `xml:"xades:SigPolicyHash,omitempty"`
+}
+
+// PolicySigPolicyID wraps identifier and description fields.
+type PolicySigPolicyID struct {
+	Identifier  Identifier `xml:"xades:Identifier"`
+	Description string     `xml:"xades:Description,omitempty"`
+}
+
+// PolicySigPolicyHash carries information about the policy hash.
+type PolicySigPolicyHash struct {
+	DigestMethod *AlgorithmMethod `xml:"ds:DigestMethod,omitempty"`
+	DigestValue  string           `xml:"ds:DigestValue,omitempty"`
 }
 
 func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
@@ -130,12 +151,10 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 	}
 
 	signedSignatureProps := &SignedSignatureProperties{
-		SigningTime:        s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()),
-		SigningCertificate: signingCertificate,
-		SignerRole:         buildSignerRole(s.opts.xadesOptions.Role),
-		SignaturePolicyIdentifier: buildSignaturePolicyIdentifier(
-			s.opts.xadesOptions.PolicyIdentifier,
-		),
+		SigningTime:               s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()),
+		SigningCertificate:        signingCertificate,
+		SignerRole:                buildSignerRole(s.opts.xadesOptions.Role),
+		SignaturePolicyIdentifier: s.opts.xadesOptions.PolicyIdentifier,
 	}
 
 	signedProps := &SignedProperties{
@@ -178,31 +197,6 @@ func buildSignerRole(roles *[]string) *SignerRole {
 			ClaimedRole: roleValues,
 		},
 	}
-}
-
-func buildSignaturePolicyIdentifier(policy *PolicyIdentifier) *SignaturePolicyIdentifier {
-	if policy == nil || policy.Identifier.Value == "" {
-		return nil
-	}
-	identifier := &SignaturePolicyIdentifier{
-		SignaturePolicyID: &SignaturePolicyID{
-			SigPolicyID: &SigPolicyID{
-				Identifier:  policy.Identifier,
-				Description: policy.Description,
-			},
-		},
-	}
-	if policy.DigestMethodAlgorithm != "" || policy.DigestValue != "" {
-		identifier.SignaturePolicyID.SigPolicyHash = &SigPolicyHash{
-			DigestValue: policy.DigestValue,
-		}
-		if policy.DigestMethodAlgorithm != "" {
-			identifier.SignaturePolicyID.SigPolicyHash.DigestMethod = &AlgorithmMethod{
-				Algorithm: policy.DigestMethodAlgorithm,
-			}
-		}
-	}
-	return identifier
 }
 
 func buildSignedDataObjectProperties(format *DataObjectFormat, referenceID string) *SignedDataObjectProperties {

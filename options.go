@@ -34,35 +34,6 @@ type XAdESOptions struct {
 	PolicyIdentifier *PolicyIdentifier
 }
 
-// DataObjectFormat describes the xades:DataObjectFormat element.
-type DataObjectFormat struct {
-	ObjectReference  string            `xml:"ObjectReference,attr"`
-	Description      string            `xml:"xades:Description,omitempty"`
-	ObjectIdentifier *ObjectIdentifier `xml:"xades:ObjectIdentifier,omitempty"`
-	MimeType         string            `xml:"xades:MimeType,omitempty"`
-	Encoding         string            `xml:"xades:Encoding,omitempty"`
-}
-
-// ObjectIdentifier configures xades:ObjectIdentifier element content.
-type ObjectIdentifier struct {
-	Identifier  Identifier `xml:"xades:Identifier"`
-	Description string     `xml:"xades:Description,omitempty"`
-}
-
-// Identifier is reused by multiple elements to represent string content with an optional qualifier attribute.
-type Identifier struct {
-	Qualifier string `xml:"Qualifier,attr,omitempty"`
-	Value     string `xml:",chardata"`
-}
-
-// PolicyIdentifier represents xades:SignaturePolicyIdentifier > xades:SignaturePolicyId.
-type PolicyIdentifier struct {
-	Identifier            Identifier
-	Description           string
-	DigestMethodAlgorithm string
-	DigestValue           string
-}
-
 // normalizeXMLDSigOptions fills missing XMLDSig values with defaults.
 func normalizeXMLDSigOptions(opts *XMLDSigOptions) *XMLDSigOptions {
 	if opts == nil {
