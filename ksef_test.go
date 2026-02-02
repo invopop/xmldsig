@@ -1,7 +1,6 @@
 package xmldsig
 
 import (
-	"crypto"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"os"
@@ -11,27 +10,6 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
-
-func TestKSeFXMLDSigOptions(t *testing.T) {
-	opts := KSeFXMLDSigOptions()
-	opts = *normalizeXMLDSigOptions(&opts)
-
-	if opts.IncludeKeyValue {
-		t.Fatalf("expected IncludeKeyValue to be false")
-	}
-	if opts.ReferenceKeyInfoInSignedInfo {
-		t.Fatalf("expected ReferenceKeyInfoInSignedInfo to be false")
-	}
-	if opts.SignedInfoCanonicalizer == nil {
-		t.Fatalf("expected SignedInfoCanonicalizer to be set")
-	}
-	if opts.SignedInfoCanonicalizer.Algorithm() != dsig.CanonicalXML10ExclusiveAlgorithmId {
-		t.Fatalf("unexpected SignedInfoCanonicalizer algorithm: %s", opts.SignedInfoCanonicalizer.Algorithm())
-	}
-	if opts.SignedInfoHash != crypto.SHA256 {
-		t.Fatalf("unexpected SignedInfoHash: %v", opts.SignedInfoHash)
-	}
-}
 
 func TestKSeFXAdESOptions(t *testing.T) {
 	opts := KSeFXAdESOptions()

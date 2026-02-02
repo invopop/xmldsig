@@ -37,7 +37,6 @@ func verifyKSeFSigningFlow(t *testing.T, xmlPath string) {
 
 	signature, err := xmldsig.Sign(originalXML,
 		xmldsig.WithCertificate(certificate),
-		xmldsig.WithXMLDSigOptions(xmldsig.KSeFXMLDSigOptions()),
 		xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions()),
 	)
 	require.NoError(t, err)

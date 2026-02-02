@@ -21,7 +21,7 @@ The library supports multiple configuration options. It's possible to specify op
 For convenience, there are **predefined option builders**:
 
 - `xmldsig.FacturaeXMLDSigOptions()` together with `xmldsig.FacturaeXAdESOptions()` for Spanish FacturaE
-- `xmldsig.KSeFXMLDSigOptions()` together with `xmldsig.KSeFXAdESOptions()` for Polish KSeF
+- `xmldsig.KSeFXAdESOptions()` for Polish KSeF (XMLDSig defaults already match the profile)
 
 For other APIs, it's possible to provide appropriate settings by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESOptions`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdESOptions` respectively. Using these functions is not compatible with predefined settings.
 
@@ -86,7 +86,6 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	authTokenRequest.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXMLDSigOptions(xmldsig.KSeFXMLDSigOptions()),
 		xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions()),
 	)
 
@@ -177,7 +176,7 @@ Before this change, the library was performing canonicalization on the signed da
 ### Updated methods
 
 - `xmldsig.WithXAdES` and `xmldsig.WithFacturaE` have been replaced by the combination of `xmldsig.WithXMLDSigOptions(xmldsig.FacturaeXMLDSigOptions())` and `xmldsig.WithXAdESOptions(xmldsig.FacturaeXAdESOptions(...))`.
-- `xmldsig.WithKSeF` has been replaced by `xmldsig.WithXMLDSigOptions(xmldsig.KSeFXMLDSigOptions())` and `xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions())`.
+- `xmldsig.WithKSeF` has been replaced by `xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions())` (XMLDSig defaults already meet the KSeF requirements).
 
 ## Copyright
 

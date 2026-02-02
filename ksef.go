@@ -5,16 +5,7 @@ import (
 	"encoding/asn1"
 	"fmt"
 	"time"
-
-	dsig "github.com/russellhaering/goxmldsig"
 )
-
-// KSeFXMLDSigOptions returns canonical XMLDSig settings required by the Polish KSeF profile.
-func KSeFXMLDSigOptions() XMLDSigOptions {
-	return XMLDSigOptions{
-		SignedInfoCanonicalizer: dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),
-	}
-}
 
 // KSeFXAdESOptions returns the KSeF-specific XAdES configuration.
 func KSeFXAdESOptions() XAdESOptions {
