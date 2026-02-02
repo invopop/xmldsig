@@ -20,22 +20,6 @@ type XMLDSigOptions struct {
 	SignedInfoHash               crypto.Hash
 }
 
-// XAdESSignerRole defines the accepted signer roles for XAdES signatures.
-type XAdESSignerRole string
-
-// String converts the XAdES role into a string.
-func (r XAdESSignerRole) String() string {
-	return string(r)
-}
-
-// XAdESPolicyConfig provides a convenient way to specify what policy details to add to the XAdES signature.
-type XAdESPolicyConfig struct {
-	URL         string `json:"url"`                   // URL to the policy definition
-	Description string `json:"description,omitempty"` // Optional human description
-	Algorithm   string `json:"algorithm"`             // eg. SHA1 or SHA256
-	Hash        string `json:"hash"`                  // Base64 encoded hash (usually provided with policy)
-}
-
 // XAdESOptions configures the XAdES-specific properties.
 type XAdESOptions struct {
 	// Configuration for XAdES always present fields
@@ -44,7 +28,6 @@ type XAdESOptions struct {
 	SigningCertificateHash        crypto.Hash
 	SignedPropertiesCanonicalizer dsig.Canonicalizer
 	SignedPropertiesHash          crypto.Hash
-	// XAdES-specific optional XML fields
 	// XAdES-specific optional XML fields
 	Role             XAdESSignerRole
 	Description      string
