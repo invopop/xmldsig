@@ -129,8 +129,8 @@ func TestSignature(t *testing.T) {
 	})
 }
 
-func xadesConfig() xmldsig.XAdESOptions {
-	return xmldsig.XAdESOptions{
+func xadesConfig() xmldsig.XAdESConfig {
+	return xmldsig.XAdESConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
@@ -142,9 +142,9 @@ func xadesConfig() xmldsig.XAdESOptions {
 	}
 }
 
-func facturaeOptions(cfg xmldsig.XAdESOptions) (xmldsig.Option, xmldsig.Option) {
+func facturaeOptions(cfg xmldsig.XAdESConfig) (xmldsig.Option, xmldsig.Option) {
 	return xmldsig.WithXMLDSigOptions(facturae.XMLDSigOptions()),
-		xmldsig.WithXAdESOptions(facturae.XAdESOptions(cfg))
+		xmldsig.WithXAdES(facturae.XAdESOptions(cfg))
 }
 
 func getCertificate() (*xmldsig.Certificate, error) {

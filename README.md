@@ -18,14 +18,14 @@ The library supports multiple configuration options. It's possible to specify op
 - whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
 - whether to include the public key value (RSA or ECDSA) in KeyInfo (some APIs require it, some don't)
 
+These options are passed to the library by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESOptions`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdES` respectively. Settings in these structs will override default settings.
+
 For convenience, there are **predefined option builders**:
 
-- `facturae.XMLDSigOptions()` together with `facturae.XAdESOptions()` for Spanish FacturaE
-- `ksef.XAdESOptions()` for Polish KSeF (XMLDSig defaults already match the profile)
+- `facturae.XMLDSigOptions()` and `facturae.XAdESOptions()` for Spanish FacturaE
+- `ksef.XAdESOptions()` for Polish KSeF (no need to override XMLDSig defaults)
 
-For other APIs, it's possible to provide appropriate settings by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESOptions`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdESOptions` respectively. Using these functions is not compatible with predefined settings.
-
-### Example of custom configuration
+### Example of fully custom configuration, overriding all defaults
 
 ```go
 xmlOpts := xmldsig.XMLDSigOptions{
@@ -50,7 +50,7 @@ xadesOpts := xmldsig.XAdESOptions{
 signature, err := xmldsig.Sign(data,
 	xmldsig.WithCertificate(cert),
 	xmldsig.WithXMLDSigOptions(xmlOpts),
-	xmldsig.WithXAdESOptions(xadesOpts),
+	xmldsig.WithXAdES(xadesOpts),
 )
 ```
 
@@ -86,7 +86,7 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	authTokenRequest.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXAdESOptions(ksef.XAdESOptions()),
+		xmldsig.WithXAdES(ksef.XAdESOptions()),
 	)
 
 	// Now output the data
@@ -126,7 +126,7 @@ func main() {
 	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
 		xmldsig.WithXMLDSigOptions(facturae.XMLDSigOptions()),
-		xmldsig.WithXAdESOptions(facturae.XAdESOptions(facturaeOptions)),
+		xmldsig.WithXAdES(facturae.XAdESOptions(facturaeOptions)),
 	)
 
 	// Now output the data
@@ -141,7 +141,7 @@ Support is also included for using a Time Stamp Authority (TSA). Simply add the 
 xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA) // uses https://freetsa.org/tsr
 ```
 
-Using this option requires XAdES support to be enabled (by calling `WithXAdESOptions`), as the timestamp is added to `QualifyingProperties` > `UnsignedProperties` > `SignatureTimestamp`.
+Using this option requires XAdES support to be enabled (by calling `WithXAdES`), as the timestamp is added to `QualifyingProperties` > `UnsignedProperties` > `SignatureTimestamp`.
 
 ## Certificates
 
@@ -175,8 +175,7 @@ Before this change, the library was performing canonicalization on the signed da
 
 ### Updated methods
 
-- `xmldsig.WithXAdES` and `xmldsig.WithFacturaE` have been replaced by the combination of `xmldsig.WithXMLDSigOptions(facturae.XMLDSigOptions())` and `xmldsig.WithXAdESOptions(facturae.XAdESOptions(...))`.
-- `xmldsig.WithKSeF` has been replaced by `xmldsig.WithXAdESOptions(ksef.XAdESOptions())` (XMLDSig defaults already meet the KSeF requirements).
+- As FacturaE-specific options were previously hardcoded and now were moved to API-specific configuration, `xmldsig.WithXAdES` now must be combined with `xmldsig.WithXAdES(facturae.XAdESOptions(...))`.
 
 ## Copyright
 

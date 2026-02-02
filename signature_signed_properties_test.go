@@ -46,7 +46,7 @@ func createCommonSignature() *Signature {
 		},
 	}
 	sig.opts.xmlOptions = *normalizeXMLDSigOptions(nil)
-	sig.opts.xadesOptions = normalizeXAdESOptions(&XAdESOptions{
+	sig.opts.xadesOptions = normalizeXAdESOptions(&XAdESConfig{
 		TimestampFormatter: func(time.Time) string {
 			return fixedTime.Format(time.RFC3339)
 		},

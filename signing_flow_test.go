@@ -37,7 +37,7 @@ func verifySigningFlow(t *testing.T, xmlPath string) {
 
 	signature, err := xmldsig.Sign(originalXML,
 		xmldsig.WithCertificate(certificate),
-		xmldsig.WithXAdESOptions(xmldsig.XAdESOptions{}),
+		xmldsig.WithXAdES(xmldsig.XAdESConfig{}),
 	)
 	require.NoError(t, err)
 

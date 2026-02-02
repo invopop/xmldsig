@@ -20,7 +20,7 @@ type options struct {
 	timestampURL string
 	cert         *Certificate
 	xmlOptions   XMLDSigOptions
-	xadesOptions *XAdESOptions
+	xadesOptions *XAdESConfig
 	timeNow      func() time.Time
 }
 
@@ -57,8 +57,8 @@ func WithXMLDSigOptions(opts XMLDSigOptions) Option {
 	}
 }
 
-// WithXAdESOptions enables XAdES support and allows passing options overriding default XAdES settings.
-func WithXAdESOptions(opts XAdESOptions) Option {
+// WithXAdES enables XAdES support, and allows passing options overriding default XAdES settings.
+func WithXAdES(opts XAdESConfig) Option {
 	return func(o *options) error {
 		o.xadesOptions = &opts
 		return nil

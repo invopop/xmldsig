@@ -20,8 +20,8 @@ type XMLDSigOptions struct {
 	SignedInfoHash               crypto.Hash
 }
 
-// XAdESOptions configures the XAdES-specific properties.
-type XAdESOptions struct {
+// XAdESConfig configures the XAdES-specific properties.
+type XAdESConfig struct {
 	// Configuration for XAdES always present fields
 	TimestampFormatter            func(time.Time) string
 	IssuerSerializer              func(pkix.RDNSequence) string
@@ -63,9 +63,9 @@ func normalizeXMLDSigOptions(opts *XMLDSigOptions) *XMLDSigOptions {
 }
 
 // normalizeXAdESOptions fills missing XAdES values with defaults.
-func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
+func normalizeXAdESOptions(opts *XAdESConfig) *XAdESConfig {
 	if opts == nil {
-		opts = &XAdESOptions{}
+		opts = &XAdESConfig{}
 	}
 
 	if opts.TimestampFormatter == nil {

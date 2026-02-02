@@ -17,7 +17,7 @@ func XMLDSigOptions() xmldsig.XMLDSigOptions {
 }
 
 // XAdESOptions builds the FacturaE-specific XAdES configuration from the provided config.
-func XAdESOptions(opts xmldsig.XAdESOptions) xmldsig.XAdESOptions {
+func XAdESOptions(opts xmldsig.XAdESConfig) xmldsig.XAdESConfig {
 	opts.TimestampFormatter = facturaeTimestampFormatter
 	opts.IssuerSerializer = facturaeIssuerSerializer
 	opts.SignedPropertiesCanonicalizer = dsig.MakeC14N10RecCanonicalizer()

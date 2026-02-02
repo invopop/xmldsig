@@ -80,7 +80,7 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 }
 
 func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
-	custom := &XAdESOptions{
+	custom := &XAdESConfig{
 		SigningCertificateHash: crypto.SHA1,
 		SignedPropertiesHash:   crypto.SHA224,
 	}
@@ -107,10 +107,10 @@ func TestWithXMLDSigOptions(t *testing.T) {
 }
 
 func TestWithXAdESOptions(t *testing.T) {
-	raw := XAdESOptions{
+	raw := XAdESConfig{
 		Role: XAdESSignerRole("issuer"),
 	}
-	opt := WithXAdESOptions(raw)
+	opt := WithXAdES(raw)
 	o := &options{}
 	if err := opt(o); err != nil {
 		t.Fatalf("WithXAdESOptions returned error: %v", err)

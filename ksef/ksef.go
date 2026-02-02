@@ -10,9 +10,9 @@ import (
 )
 
 // XAdESOptions returns the KSeF-specific XAdES configuration.
-func XAdESOptions() xmldsig.XAdESOptions {
+func XAdESOptions() xmldsig.XAdESConfig {
 	// List of allowed canonicalizers: https://github.com/CIRFMF/ksef-docs/blob/main/auth/podpis-xades.md
-	return xmldsig.XAdESOptions{
+	return xmldsig.XAdESConfig{
 		TimestampFormatter: ksefTimestampFormatter,
 		IssuerSerializer:   ksefIssuerSerializer,
 	}
