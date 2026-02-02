@@ -5,7 +5,6 @@ import (
 	"crypto/x509/pkix"
 	"time"
 
-	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
@@ -33,30 +32,27 @@ type XAdESOptions struct {
 	Role             *[]string
 	DataObjectFormat *DataObjectFormat
 	PolicyIdentifier *PolicyIdentifier
-	// Custom XML fields (if there are some not included above)
-	SignedSignaturePropertiesCustomElements *[]*etree.Element
-	SignedPropertiesCustomElements          *[]*etree.Element
 }
 
 // DataObjectFormat describes the xades:DataObjectFormat element.
 type DataObjectFormat struct {
-	ObjectReference  string `xml:"ObjectReference,attr"`
-	Description      string
-	ObjectIdentifier *ObjectIdentifier
-	MimeType         string
-	Encoding         string
+	ObjectReference  string            `xml:"ObjectReference,attr"`
+	Description      string            `xml:"xades:Description,omitempty"`
+	ObjectIdentifier *ObjectIdentifier `xml:"xades:ObjectIdentifier,omitempty"`
+	MimeType         string            `xml:"xades:MimeType,omitempty"`
+	Encoding         string            `xml:"xades:Encoding,omitempty"`
 }
 
 // ObjectIdentifier configures xades:ObjectIdentifier element content.
 type ObjectIdentifier struct {
-	Identifier  Identifier
-	Description string
+	Identifier  Identifier `xml:"xades:Identifier"`
+	Description string     `xml:"xades:Description,omitempty"`
 }
 
 // Identifier is reused by multiple elements to represent string content with an optional qualifier attribute.
 type Identifier struct {
-	Qualifier string
-	Value     string
+	Qualifier string `xml:"Qualifier,attr,omitempty"`
+	Value     string `xml:",chardata"`
 }
 
 // PolicyIdentifier represents xades:SignaturePolicyIdentifier > xades:SignaturePolicyId.

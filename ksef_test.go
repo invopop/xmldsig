@@ -41,13 +41,6 @@ func TestKSeFXAdESOptions(t *testing.T) {
 		t.Fatalf("expected IssuerSerializer to be set")
 	}
 
-	if opts.SignedSignaturePropertiesCustomElements != nil {
-		t.Fatalf("expected SignedSignaturePropertiesCustomElements to be nil")
-	}
-	if opts.SignedPropertiesCustomElements != nil {
-		t.Fatalf("expected SignedPropertiesCustomElements to be nil")
-	}
-
 	if opts.SignedPropertiesCanonicalizer == nil {
 		t.Fatalf("expected SignedPropertiesCanonicalizer to be set")
 	}

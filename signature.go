@@ -129,8 +129,85 @@ type QualifyingProperties struct {
 	ID             string `xml:"Id,attr"`
 	Target         string `xml:"Target,attr"`
 
-	SignedProperties   *EtreeElement       `xml:"xades:SignedProperties"` // etree, not struct - because it may contain custom elements from external configuration
+	SignedProperties   *SignedProperties   `xml:"xades:SignedProperties"`
 	UnsignedProperties *UnsignedProperties `xml:"xades:UnsignedProperties,omitempty"`
+}
+
+// SignedProperties represents the root xades:SignedProperties element.
+type SignedProperties struct {
+	XMLName                    xml.Name                    `xml:"xades:SignedProperties"`
+	ID                         string                      `xml:"Id,attr"`
+	SignedSignatureProperties  *SignedSignatureProperties  `xml:"xades:SignedSignatureProperties"`
+	SignedDataObjectProperties *SignedDataObjectProperties `xml:"xades:SignedDataObjectProperties,omitempty"`
+}
+
+// SignedSignatureProperties contains signer-specific statements such as SigningTime and SigningCertificate.
+type SignedSignatureProperties struct {
+	SigningTime               string                     `xml:"xades:SigningTime"`
+	SigningCertificate        *SigningCertificate        `xml:"xades:SigningCertificate"`
+	SignaturePolicyIdentifier *SignaturePolicyIdentifier `xml:"xades:SignaturePolicyIdentifier,omitempty"`
+	SignerRole                *SignerRole                `xml:"xades:SignerRole,omitempty"`
+}
+
+// SigningCertificate encloses certificate details required by XAdES.
+type SigningCertificate struct {
+	Cert *Cert `xml:"xades:Cert"`
+}
+
+// Cert encapsulates digest and issuer information for the signing certificate.
+type Cert struct {
+	CertDigest   *CertDigest   `xml:"xades:CertDigest"`
+	IssuerSerial *IssuerSerial `xml:"xades:IssuerSerial"`
+}
+
+// CertDigest contains the digest method and value for the signing certificate.
+type CertDigest struct {
+	DigestMethod *AlgorithmMethod `xml:"ds:DigestMethod"`
+	DigestValue  string           `xml:"ds:DigestValue"`
+}
+
+// IssuerSerial wraps issuer and serial number statements for a certificate.
+type IssuerSerial struct {
+	X509IssuerName   string `xml:"ds:X509IssuerName"`
+	X509SerialNumber string `xml:"ds:X509SerialNumber"`
+}
+
+// SignaturePolicyIdentifier links to the policy governing the signature process.
+type SignaturePolicyIdentifier struct {
+	SignaturePolicyID *SignaturePolicyID `xml:"xades:SignaturePolicyId"`
+}
+
+// SignaturePolicyID contains the identifier and optional hash of the policy.
+type SignaturePolicyID struct {
+	SigPolicyID   *SigPolicyID   `xml:"xades:SigPolicyId"`
+	SigPolicyHash *SigPolicyHash `xml:"xades:SigPolicyHash,omitempty"`
+}
+
+// SigPolicyID holds the identifier and optional description of the policy.
+type SigPolicyID struct {
+	Identifier  Identifier `xml:"xades:Identifier"`
+	Description string     `xml:"xades:Description,omitempty"`
+}
+
+// SigPolicyHash carries the digest of the linked signature policy.
+type SigPolicyHash struct {
+	DigestMethod *AlgorithmMethod `xml:"ds:DigestMethod,omitempty"`
+	DigestValue  string           `xml:"ds:DigestValue,omitempty"`
+}
+
+// SignerRole enumerates claimed signer roles.
+type SignerRole struct {
+	ClaimedRoles *ClaimedRoles `xml:"xades:ClaimedRoles"`
+}
+
+// ClaimedRoles holds one or more claimed role declarations.
+type ClaimedRoles struct {
+	ClaimedRole []string `xml:"xades:ClaimedRole"`
+}
+
+// SignedDataObjectProperties describes signed objects such as the main document body.
+type SignedDataObjectProperties struct {
+	DataObjectFormat *DataObjectFormat `xml:"xades:DataObjectFormat"`
 }
 
 const (
@@ -234,7 +311,7 @@ func (s *Signature) buildQualifyingProperties() error {
 		XAdESNamespace:   NamespaceXAdES,
 		ID:               fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
 		Target:           fmt.Sprintf("#"+signatureRootIDFormat, s.opts.docID),
-		SignedProperties: NewEtreeElement(signedPropsElement),
+		SignedProperties: signedPropsElement,
 	}
 
 	s.Object = &Object{
@@ -243,7 +320,7 @@ func (s *Signature) buildQualifyingProperties() error {
 	return nil
 }
 
-func (s *Signature) buildSignedPropertiesElement() (*etree.Element, error) {
+func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 	if s.opts.xadesOptions == nil {
 		return nil, errors.New("missing xades options")
 	}
@@ -261,31 +338,38 @@ func (s *Signature) buildSignedPropertiesElement() (*etree.Element, error) {
 		return nil, fmt.Errorf("certificate digest algorithm: %w", err)
 	}
 
-	el := etree.NewElement("xades:SignedProperties")
-	el.CreateAttr("Id", fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID))
+	signingCertificate := &SigningCertificate{
+		Cert: &Cert{
+			CertDigest: &CertDigest{
+				DigestMethod: &AlgorithmMethod{Algorithm: certDigestAlgorithm},
+				DigestValue:  fingerprint,
+			},
+			IssuerSerial: &IssuerSerial{
+				X509IssuerName:   s.serializeIssuer(cert),
+				X509SerialNumber: cert.SerialNumber(),
+			},
+		},
+	}
 
-	signedSignatureProps := el.CreateElement("xades:SignedSignatureProperties")
-	signedSignatureProps.CreateElement("xades:SigningTime").SetText(s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()))
+	signedSignatureProps := &SignedSignatureProperties{
+		SigningTime:        s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()),
+		SigningCertificate: signingCertificate,
+		SignerRole:         buildSignerRole(s.opts.xadesOptions.Role),
+		SignaturePolicyIdentifier: buildSignaturePolicyIdentifier(
+			s.opts.xadesOptions.PolicyIdentifier,
+		),
+	}
 
-	signingCertificate := signedSignatureProps.CreateElement("xades:SigningCertificate")
-	certElement := signingCertificate.CreateElement("xades:Cert")
-	certDigest := certElement.CreateElement("xades:CertDigest")
-	digestMethod := certDigest.CreateElement("ds:DigestMethod")
-	digestMethod.CreateAttr("Algorithm", certDigestAlgorithm)
-	certDigest.CreateElement("ds:DigestValue").SetText(fingerprint)
+	signedProps := &SignedProperties{
+		ID:                        fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
+		SignedSignatureProperties: signedSignatureProps,
+		SignedDataObjectProperties: buildSignedDataObjectProperties(
+			s.opts.xadesOptions.DataObjectFormat,
+			fmt.Sprintf(signedDataReferenceID, s.opts.docID),
+		),
+	}
 
-	issuerSerial := certElement.CreateElement("xades:IssuerSerial")
-	issuerSerial.CreateElement("ds:X509IssuerName").SetText(s.serializeIssuer(cert))
-	issuerSerial.CreateElement("ds:X509SerialNumber").SetText(cert.SerialNumber())
-
-	addSignerRoles(signedSignatureProps, s.opts.xadesOptions.Role)
-	addPolicyIdentifier(signedSignatureProps, s.opts.xadesOptions.PolicyIdentifier)
-	addDataObjectFormat(el, s.opts.xadesOptions.DataObjectFormat, fmt.Sprintf(signedDataReferenceID, s.opts.docID))
-
-	appendCustomElements(el, s.opts.xadesOptions.SignedPropertiesCustomElements)
-	appendCustomElements(signedSignatureProps, s.opts.xadesOptions.SignedSignaturePropertiesCustomElements)
-
-	return el, nil
+	return signedProps, nil
 }
 
 func (s *Signature) serializeIssuer(cert *Certificate) string {
@@ -297,21 +381,9 @@ func (s *Signature) serializeIssuer(cert *Certificate) string {
 	return cert.Issuer()
 }
 
-func appendCustomElements(parent *etree.Element, elements *[]*etree.Element) {
-	if parent == nil || elements == nil {
-		return
-	}
-	for _, el := range *elements {
-		if el == nil {
-			continue
-		}
-		parent.AddChild(el.Copy())
-	}
-}
-
-func addSignerRoles(parent *etree.Element, roles *[]string) {
-	if parent == nil || roles == nil {
-		return
+func buildSignerRole(roles *[]string) *SignerRole {
+	if roles == nil {
+		return nil
 	}
 	roleValues := make([]string, 0, len(*roles))
 	for _, r := range *roles {
@@ -321,83 +393,51 @@ func addSignerRoles(parent *etree.Element, roles *[]string) {
 		roleValues = append(roleValues, r)
 	}
 	if len(roleValues) == 0 {
-		return
-	}
-	roleElement := parent.CreateElement("xades:SignerRole")
-	claimedRoles := roleElement.CreateElement("xades:ClaimedRoles")
-	for _, r := range roleValues {
-		claimedRoles.CreateElement("xades:ClaimedRole").SetText(r)
-	}
-}
-
-func addPolicyIdentifier(parent *etree.Element, policy *PolicyIdentifier) {
-	if parent == nil || policy == nil {
-		return
-	}
-	if policy.Identifier.Value == "" {
-		return
-	}
-	root := parent.CreateElement("xades:SignaturePolicyIdentifier")
-	signaturePolicyID := root.CreateElement("xades:SignaturePolicyId")
-	sigPolicyID := signaturePolicyID.CreateElement("xades:SigPolicyId")
-	appendIdentifierElement(sigPolicyID, "xades:Identifier", policy.Identifier)
-	if policy.Description != "" {
-		sigPolicyID.CreateElement("xades:Description").SetText(policy.Description)
-	}
-	if policy.DigestMethodAlgorithm != "" || policy.DigestValue != "" {
-		sigPolicyHash := signaturePolicyID.CreateElement("xades:SigPolicyHash")
-		if policy.DigestMethodAlgorithm != "" {
-			digestMethod := sigPolicyHash.CreateElement("ds:DigestMethod")
-			digestMethod.CreateAttr("Algorithm", policy.DigestMethodAlgorithm)
-		}
-		if policy.DigestValue != "" {
-			sigPolicyHash.CreateElement("ds:DigestValue").SetText(policy.DigestValue)
-		}
-	}
-}
-
-func addDataObjectFormat(parent *etree.Element, format *DataObjectFormat, referenceID string) {
-	if parent == nil || format == nil {
-		return
-	}
-	signedDataObjectProps := parent.FindElement("xades:SignedDataObjectProperties")
-	if signedDataObjectProps == nil {
-		signedDataObjectProps = parent.CreateElement("xades:SignedDataObjectProperties")
-	}
-	dataObjectFormat := signedDataObjectProps.CreateElement("xades:DataObjectFormat")
-	objectReference := format.ObjectReference
-	if objectReference == "" {
-		objectReference = "#" + referenceID
-	}
-	dataObjectFormat.CreateAttr("ObjectReference", objectReference)
-	if format.Description != "" {
-		dataObjectFormat.CreateElement("xades:Description").SetText(format.Description)
-	}
-	if format.ObjectIdentifier != nil {
-		objectIdentifier := dataObjectFormat.CreateElement("xades:ObjectIdentifier")
-		appendIdentifierElement(objectIdentifier, "xades:Identifier", format.ObjectIdentifier.Identifier)
-		if format.ObjectIdentifier.Description != "" {
-			objectIdentifier.CreateElement("xades:Description").SetText(format.ObjectIdentifier.Description)
-		}
-	}
-	if format.MimeType != "" {
-		dataObjectFormat.CreateElement("xades:MimeType").SetText(format.MimeType)
-	}
-	if format.Encoding != "" {
-		dataObjectFormat.CreateElement("xades:Encoding").SetText(format.Encoding)
-	}
-}
-
-func appendIdentifierElement(parent *etree.Element, tag string, id Identifier) *etree.Element {
-	if parent == nil || id.Value == "" {
 		return nil
 	}
-	el := parent.CreateElement(tag)
-	if id.Qualifier != "" {
-		el.CreateAttr("Qualifier", id.Qualifier)
+	return &SignerRole{
+		ClaimedRoles: &ClaimedRoles{
+			ClaimedRole: roleValues,
+		},
 	}
-	el.SetText(id.Value)
-	return el
+}
+
+func buildSignaturePolicyIdentifier(policy *PolicyIdentifier) *SignaturePolicyIdentifier {
+	if policy == nil || policy.Identifier.Value == "" {
+		return nil
+	}
+	identifier := &SignaturePolicyIdentifier{
+		SignaturePolicyID: &SignaturePolicyID{
+			SigPolicyID: &SigPolicyID{
+				Identifier:  policy.Identifier,
+				Description: policy.Description,
+			},
+		},
+	}
+	if policy.DigestMethodAlgorithm != "" || policy.DigestValue != "" {
+		identifier.SignaturePolicyID.SigPolicyHash = &SigPolicyHash{
+			DigestValue: policy.DigestValue,
+		}
+		if policy.DigestMethodAlgorithm != "" {
+			identifier.SignaturePolicyID.SigPolicyHash.DigestMethod = &AlgorithmMethod{
+				Algorithm: policy.DigestMethodAlgorithm,
+			}
+		}
+	}
+	return identifier
+}
+
+func buildSignedDataObjectProperties(format *DataObjectFormat, referenceID string) *SignedDataObjectProperties {
+	if format == nil {
+		return nil
+	}
+	clone := *format
+	if clone.ObjectReference == "" {
+		clone.ObjectReference = "#" + referenceID
+	}
+	return &SignedDataObjectProperties{
+		DataObjectFormat: &clone,
+	}
 }
 
 func (s *Signature) buildKeyInfo() {
@@ -560,7 +600,7 @@ func (s *Signature) buildSignedInfo() error {
 			return fmt.Errorf("xades digest algorithm: %w", err)
 		}
 		si.Reference = append(si.Reference, &Reference{
-			URI: "#" + sp.ID(),
+			URI: "#" + sp.ID,
 			Transforms: &Transforms{
 				Transform: []*AlgorithmMethod{
 					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},

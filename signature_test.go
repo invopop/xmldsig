@@ -86,7 +86,7 @@ func TestSignature(t *testing.T) {
 		assert.Nil(t, err)
 		// This is mostly useful for getting back fixed results, so
 		// we can safely compare the final signature here.
-		assert.Contains(t, signature.Value.Value, "FI/dYHsrKBKKTkJWYXHk/fNd4H19VnReFF+H8mD4uFva0RYUzC+RnfY2LiBtmXEtNfQ+PFmz+mV15sWWzyaqy9zYWX35GNFZLuWFleIRp0RsiHS6mV1gzphzVqyceVGKlKTH6zh6pQ9d/cX+15NMH0XE1Ephz4aFpaRb3WkehAWQ2csseYoKMrgCyg/kMzZRBJYcA9b6POa8ZOEcydIi3sdrt9S6e6Z+Msx1LsGOhvc1VQ0Hr1rKgkpS2uHswTB3UJrozT+fYOYK3y5DZJvxuJDAOlmCxniohjman7lkSdhEDZuDsJtqdnoi3dTe8pon0OtxdCiop+HH8nAV7CLTJg==")
+		assert.Contains(t, signature.Value.Value, "StAMqTR9wMvkBrpsG2myUAIew2cLTJbhPCCosqtsU6Srp6PVEdTyNylPgn/Kx1xcDbvA4jPfmkTSxxcvfXRkL+Q5ogCJEoLu7bbiCbjKmoyCyD54o4VONDMYK3fpQ2muw3m4fm3C8eOk+9BhmyGDbaQe5gefRLLBSA/7oGTWdooXuiHGg396dg7sGpzSEfslylBuF8yZZd1cMsvmBFUUPL14BS6x0j/H8RscissjRVUb1LZGEu0JMwVNjfAyEZDY/r4Sco2e0bLi2J5xrFDLt8aacwFwRLb4WC6MdWIf4c8Lzoi7nVB+xvMG46r8PBgPFAlfNF5Qj3+mzlY9hLQvWg==")
 	})
 
 	t.Run("should not set a signer role when not provided", func(t *testing.T) {
@@ -100,12 +100,11 @@ func TestSignature(t *testing.T) {
 		)
 		assert.Nil(t, err)
 
-		sp := signature.Object.QualifyingProperties.SignedProperties.Element()
-		if sp == nil {
+		sp := signature.Object.QualifyingProperties.SignedProperties
+		if sp == nil || sp.SignedSignatureProperties == nil {
 			t.Fatalf("SignedProperties element missing")
 		}
-		roleElement := sp.FindElement("xades:SignedSignatureProperties/xades:SignerRole")
-		assert.Nil(t, roleElement)
+		assert.Nil(t, sp.SignedSignatureProperties.SignerRole)
 	})
 
 	t.Run("should set a signer role when provided", func(t *testing.T) {
@@ -117,13 +116,14 @@ func TestSignature(t *testing.T) {
 		)
 		assert.Nil(t, err)
 
-		sp := signature.Object.QualifyingProperties.SignedProperties.Element()
-		if sp == nil {
+		sp := signature.Object.QualifyingProperties.SignedProperties
+		if sp == nil || sp.SignedSignatureProperties == nil {
 			t.Fatalf("SignedProperties element missing")
 		}
-		roleElement := sp.FindElement("xades:SignedSignatureProperties/xades:SignerRole/xades:ClaimedRoles/xades:ClaimedRole")
-		if assert.NotNil(t, roleElement) {
-			assert.Equal(t, "third party", roleElement.Text())
+		if assert.NotNil(t, sp.SignedSignatureProperties.SignerRole) &&
+			assert.NotNil(t, sp.SignedSignatureProperties.SignerRole.ClaimedRoles) {
+			require.Len(t, sp.SignedSignatureProperties.SignerRole.ClaimedRoles.ClaimedRole, 1)
+			assert.Equal(t, "third party", sp.SignedSignatureProperties.SignerRole.ClaimedRoles.ClaimedRole[0])
 		}
 	})
 }

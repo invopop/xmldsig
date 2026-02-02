@@ -13,7 +13,6 @@ Partial implementation of the XML DSig and XAdES standards for Go. Accepts certi
 The library supports multiple configuration options. It's possible to specify options such as:
 
 - whether to attach QualifyingProperties element (XAdES) or not (XML DSig but without XAdES)
-- custom XML elements to include in SignedProperties and SignedSignatureProperties (some APIs require it, some don't)
 - what canonicalizers to use
 - what hashes to use
 - whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
@@ -43,8 +42,6 @@ xmlOpts := xmldsig.XMLDSigOptions{
 xadesOpts := xmldsig.XAdESOptions{
 	TimestampFormatter:            customTimestampFormatter,          // Timestamp formatter for SigningTime
 	IssuerSerializer:              nil,                               // Serializer for issuer names, nil for default
-	SignedSignaturePropertiesCustomElements: nil,                     // Custom SignedSignatureProperties entries (rare)
-	SignedPropertiesCustomElements:          nil,                     // Custom SignedProperties entries (rare)
 	SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(),
 	SignedPropertiesHash:                    crypto.SHA512,
 	SigningCertificateHash:                  crypto.SHA512,

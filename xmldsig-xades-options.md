@@ -34,10 +34,6 @@ These options allow configuring the XAdES level. To enable XAdES, use `WithXAdES
 | `Role` | `[]string` pointer to slice of strings | `SignedProperties > SignedSignatureProperties > SignerRole > ClaimedRoles > ClaimedRole` | empty slice |
 | `DataObjectFormat` | `*DataObjectFormat` pointer to struct | `SignedProperties > SignedDataObjectProperties > DataObjectFormat` | `nil` |
 | `PolicyIdentifier` | `*PolicyIdentifier` pointer to struct | `SignedProperties > SignedSignatureProperties > PolicyIdentifier` | `nil` |
-| `SignedSignaturePropertiesCustomElements` | `*[]*etree.Element` | Custom elements to include in `SignedSignatureProperties` | `nil` |
-| `SignedPropertiesCustomElements` | `*[]*etree.Element` | Custom elements to include in `SignedProperties` | `nil` |
-
-Options `SignedPropertiesCustomElements` and `SignedSignaturePropertiesCustomElements` should be used only for cases that are **not** covered by XAdES built-in elements
 
 For FacturaE:
 
