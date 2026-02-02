@@ -9,30 +9,68 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// XAdESOptions allows low-level control over how hashes and canonicalization
-// are performed when generating extended signatures.
-type XAdESOptions struct {
-	DataCanonicalizer                       dsig.Canonicalizer
-	DataHash                                crypto.Hash
-	TimestampFormatter                      func(time.Time) string
-	IssuerSerializer                        func(pkix.RDNSequence) string
-	AttachQualifyingProperties              bool // Whether to attach XAdES qualifying properties to the signature - disabling will result in a XMLDSIG signature but without XAdES compliance
-	SignedSignaturePropertiesCustomElements *[]*etree.Element
-	SignedPropertiesCustomElements          *[]*etree.Element
-	SignedPropertiesCanonicalizer           dsig.Canonicalizer
-	CertificateHash                         crypto.Hash
-	SignedPropertiesHash                    crypto.Hash
-	KeyInfoHash                             crypto.Hash // 0 to disable adding Reference to KeyInfo
-	KeyInfoCanonicalizer                    dsig.Canonicalizer
-	SignedInfoCanonicalizer                 dsig.Canonicalizer
-	SignedInfoHash                          crypto.Hash
-	IncludeKeyValue                         bool
+// XMLDSigOptions configures canonicalization, hashing, and KeyInfo handling for raw XML DSig signatures.
+type XMLDSigOptions struct {
+	DataCanonicalizer            dsig.Canonicalizer
+	DataHash                     crypto.Hash
+	IncludeKeyValue              bool
+	ReferenceKeyInfoInSignedInfo bool
+	KeyInfoHash                  crypto.Hash
+	KeyInfoCanonicalizer         dsig.Canonicalizer
+	SignedInfoCanonicalizer      dsig.Canonicalizer
+	SignedInfoHash               crypto.Hash
 }
 
-// normalizeXAdESOptions fills missing values with defaults.
-func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
+// XAdESOptions configures the XAdES-specific properties.
+type XAdESOptions struct {
+	// Configuration for XAdES always present fields
+	TimestampFormatter            func(time.Time) string
+	IssuerSerializer              func(pkix.RDNSequence) string
+	SigningCertificateHash        crypto.Hash
+	SignedPropertiesCanonicalizer dsig.Canonicalizer
+	SignedPropertiesHash          crypto.Hash
+	// XAdES-specific optional XML fields
+	Role             *[]string
+	DataObjectFormat *DataObjectFormat
+	PolicyIdentifier *PolicyIdentifier
+	// Custom XML fields (if there are some not included above)
+	SignedSignaturePropertiesCustomElements *[]*etree.Element
+	SignedPropertiesCustomElements          *[]*etree.Element
+}
+
+// DataObjectFormat describes the xades:DataObjectFormat element.
+type DataObjectFormat struct {
+	ObjectReference  string `xml:"ObjectReference,attr"`
+	Description      string
+	ObjectIdentifier *ObjectIdentifier
+	MimeType         string
+	Encoding         string
+}
+
+// ObjectIdentifier configures xades:ObjectIdentifier element content.
+type ObjectIdentifier struct {
+	Identifier  Identifier
+	Description string
+}
+
+// Identifier is reused by multiple elements to represent string content with an optional qualifier attribute.
+type Identifier struct {
+	Qualifier string
+	Value     string
+}
+
+// PolicyIdentifier represents xades:SignaturePolicyIdentifier > xades:SignaturePolicyId.
+type PolicyIdentifier struct {
+	Identifier            Identifier
+	Description           string
+	DigestMethodAlgorithm string
+	DigestValue           string
+}
+
+// normalizeXMLDSigOptions fills missing XMLDSig values with defaults.
+func normalizeXMLDSigOptions(opts *XMLDSigOptions) *XMLDSigOptions {
 	if opts == nil {
-		opts = &XAdESOptions{}
+		opts = &XMLDSigOptions{}
 	}
 
 	if opts.DataCanonicalizer == nil {
@@ -41,26 +79,41 @@ func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
 	if opts.DataHash == 0 {
 		opts.DataHash = crypto.SHA512
 	}
-	if opts.TimestampFormatter == nil {
-		opts.TimestampFormatter = defaultTimestampFormatter
+	if opts.KeyInfoCanonicalizer == nil {
+		opts.KeyInfoCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
 	}
-	if opts.IssuerSerializer == nil {
-		opts.IssuerSerializer = defaultIssuerSerializer
-	}
-	if opts.CertificateHash == 0 {
-		opts.CertificateHash = crypto.SHA512
-	}
-	if opts.SignedPropertiesHash == 0 {
-		opts.SignedPropertiesHash = crypto.SHA512
-	}
-	if opts.SignedPropertiesCanonicalizer == nil {
-		opts.SignedPropertiesCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
+	if opts.KeyInfoHash == 0 {
+		opts.KeyInfoHash = crypto.SHA512
 	}
 	if opts.SignedInfoCanonicalizer == nil {
 		opts.SignedInfoCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
 	}
 	if opts.SignedInfoHash == 0 {
 		opts.SignedInfoHash = crypto.SHA256
+	}
+	return opts
+}
+
+// normalizeXAdESOptions fills missing XAdES values with defaults.
+func normalizeXAdESOptions(opts *XAdESOptions) *XAdESOptions {
+	if opts == nil {
+		opts = &XAdESOptions{}
+	}
+
+	if opts.TimestampFormatter == nil {
+		opts.TimestampFormatter = defaultTimestampFormatter
+	}
+	if opts.IssuerSerializer == nil {
+		opts.IssuerSerializer = defaultIssuerSerializer
+	}
+	if opts.SigningCertificateHash == 0 {
+		opts.SigningCertificateHash = crypto.SHA512
+	}
+	if opts.SignedPropertiesCanonicalizer == nil {
+		opts.SignedPropertiesCanonicalizer = dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList("")
+	}
+	if opts.SignedPropertiesHash == 0 {
+		opts.SignedPropertiesHash = crypto.SHA512
 	}
 	return opts
 }

@@ -2,13 +2,21 @@ package xmldsig
 
 import "testing"
 
-func TestFacturaeSignedSignaturePropertiesCustomElements(t *testing.T) {
-	if facturaeSignedSignaturePropertiesCustomElements(nil) != nil {
-		t.Fatalf("expected nil elements when config is nil")
+func TestFacturaeXMLDSigOptions(t *testing.T) {
+	opts := FacturaeXMLDSigOptions()
+	opts = *normalizeXMLDSigOptions(&opts)
+	if !opts.IncludeKeyValue {
+		t.Fatalf("expected IncludeKeyValue to be true")
 	}
+	if !opts.ReferenceKeyInfoInSignedInfo {
+		t.Fatalf("expected ReferenceKeyInfoInSignedInfo to be true")
+	}
+}
 
+func TestFacturaeXAdESOptionsIncludesPolicyRoleAndDataObject(t *testing.T) {
 	cfg := &FacturaEConfig{
-		Role: XAdESSignerRole("issuer"),
+		Role:        XAdESSignerRole("issuer"),
+		Description: "FacturaE data object",
 		Policy: &XAdESPolicyConfig{
 			URL:         "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf",
 			Description: "Política de Firma FacturaE v3.1",
@@ -16,113 +24,51 @@ func TestFacturaeSignedSignaturePropertiesCustomElements(t *testing.T) {
 			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
 		},
 	}
-
-	elements := facturaeSignedSignaturePropertiesCustomElements(cfg)
-	if elements == nil {
-		t.Fatalf("expected elements when config is provided")
+	opts := FacturaeXAdESOptions(cfg)
+	opts = *normalizeXAdESOptions(&opts)
+	if opts.TimestampFormatter == nil {
+		t.Fatalf("expected TimestampFormatter to be set")
 	}
-
-	if len(*elements) != 2 {
-		t.Fatalf("expected 2 elements, got %d", len(*elements))
+	if opts.IssuerSerializer == nil {
+		t.Fatalf("expected IssuerSerializer to be set")
 	}
-
-	policy := (*elements)[0]
-	if policy.Space != "xades" || policy.Tag != "SignaturePolicyIdentifier" {
-		t.Fatalf("unexpected policy element namespace/tag: %s:%s", policy.Space, policy.Tag)
+	if opts.SignedPropertiesCanonicalizer == nil {
+		t.Fatalf("expected SignedPropertiesCanonicalizer to be set")
 	}
-
-	sigPolicyID := policy.FindElement("xades:SignaturePolicyId/xades:SigPolicyId")
-	if sigPolicyID == nil {
-		t.Fatalf("missing SigPolicyId element")
+	if opts.Role == nil || len(*opts.Role) != 1 || (*opts.Role)[0] != cfg.Role.String() {
+		t.Fatalf("expected Role slice to be populated, got %+v", opts.Role)
 	}
-	identifier := sigPolicyID.SelectElement("xades:Identifier")
-	if identifier == nil || identifier.Text() != cfg.Policy.URL {
-		t.Fatalf("unexpected Identifier content: %v", identifier)
+	if opts.PolicyIdentifier == nil {
+		t.Fatalf("expected PolicyIdentifier to be set")
 	}
-	description := sigPolicyID.SelectElement("xades:Description")
-	if description == nil || description.Text() != cfg.Policy.Description {
-		t.Fatalf("unexpected Description content: %v", description)
+	if opts.PolicyIdentifier.Identifier.Value != cfg.Policy.URL {
+		t.Fatalf("unexpected policy identifier: %+v", opts.PolicyIdentifier.Identifier)
 	}
-	sigPolicyHash := policy.FindElement("xades:SignaturePolicyId/xades:SigPolicyHash")
-	if sigPolicyHash == nil {
-		t.Fatalf("missing SigPolicyHash element")
+	if opts.PolicyIdentifier.Description != cfg.Policy.Description {
+		t.Fatalf("unexpected policy description: %s", opts.PolicyIdentifier.Description)
 	}
-	digestMethod := sigPolicyHash.SelectElement("ds:DigestMethod")
-	if digestMethod == nil {
-		t.Fatalf("missing DigestMethod element")
+	if opts.PolicyIdentifier.DigestMethodAlgorithm != cfg.Policy.Algorithm {
+		t.Fatalf("unexpected policy algorithm: %s", opts.PolicyIdentifier.DigestMethodAlgorithm)
 	}
-	if got := digestMethod.SelectAttrValue("Algorithm", ""); got != cfg.Policy.Algorithm {
-		t.Fatalf("unexpected digest method algorithm: %s", got)
+	if opts.PolicyIdentifier.DigestValue != cfg.Policy.Hash {
+		t.Fatalf("unexpected policy hash: %s", opts.PolicyIdentifier.DigestValue)
 	}
-	digestValue := sigPolicyHash.SelectElement("ds:DigestValue")
-	if digestValue == nil || digestValue.Text() != cfg.Policy.Hash {
-		t.Fatalf("unexpected digest value")
+	if opts.DataObjectFormat == nil {
+		t.Fatalf("expected DataObjectFormat to be set")
 	}
-
-	roleElement := (*elements)[1]
-	if roleElement.Space != "xades" || roleElement.Tag != "SignerRole" {
-		t.Fatalf("unexpected tag for role element: %s:%s", roleElement.Space, roleElement.Tag)
+	if opts.DataObjectFormat.Description != cfg.Description {
+		t.Fatalf("unexpected DataObjectFormat description: %s", opts.DataObjectFormat.Description)
 	}
-	claimedRole := roleElement.FindElement("xades:ClaimedRoles/xades:ClaimedRole")
-	if claimedRole == nil || claimedRole.Text() != cfg.Role.String() {
-		t.Fatalf("unexpected claimed role content")
+	if opts.DataObjectFormat.MimeType != "text/xml" {
+		t.Fatalf("unexpected DataObjectFormat mime type: %s", opts.DataObjectFormat.MimeType)
 	}
-}
-
-func TestFacturaeSignedPropertiesCustomElements(t *testing.T) {
-	if facturaeSignedPropertiesCustomElements(nil) != nil {
-		t.Fatalf("expected nil elements when config is nil")
+	if opts.DataObjectFormat.ObjectIdentifier == nil {
+		t.Fatalf("expected DataObjectFormat.ObjectIdentifier to be set")
 	}
-
-	cfg := &FacturaEConfig{
-		Description: "FacturaE data object",
+	if opts.DataObjectFormat.ObjectIdentifier.Identifier.Qualifier != "OIDAsURN" {
+		t.Fatalf("unexpected qualifier: %s", opts.DataObjectFormat.ObjectIdentifier.Identifier.Qualifier)
 	}
-
-	elements := facturaeSignedPropertiesCustomElements(cfg)
-	if elements == nil {
-		t.Fatalf("expected elements when config is provided")
-	}
-
-	if len(*elements) != 1 {
-		t.Fatalf("expected 1 element, got %d", len(*elements))
-	}
-
-	signedDataObjectProps := (*elements)[0]
-	if signedDataObjectProps.Space != "xades" || signedDataObjectProps.Tag != "SignedDataObjectProperties" {
-		t.Fatalf("unexpected tag for signed data object props: %s:%s", signedDataObjectProps.Space, signedDataObjectProps.Tag)
-	}
-
-	dataObject := signedDataObjectProps.SelectElement("xades:DataObjectFormat")
-	if dataObject == nil {
-		t.Fatalf("expected DataObjectFormat child")
-	}
-
-	objectRef := dataObject.SelectAttr("ObjectReference")
-	if objectRef == nil {
-		t.Fatalf("missing ObjectReference attribute")
-	}
-	if objectRef.Value != "#Reference" {
-		t.Fatalf("unexpected ObjectReference value: %s", objectRef.Value)
-	}
-
-	description := dataObject.SelectElement("xades:Description")
-	if description == nil || description.Text() != cfg.Description {
-		t.Fatalf("unexpected description content")
-	}
-
-	identifier := dataObject.FindElement("xades:ObjectIdentifier/xades:Identifier")
-	if identifier == nil {
-		t.Fatalf("missing identifier element")
-	}
-	if got := identifier.SelectAttrValue("Qualifier", ""); got != "OIDAsURN" {
-		t.Fatalf("unexpected identifier qualifier: %s", got)
-	}
-	if identifier.Text() != "urn:oid:1.2.840.10003.5.109.10" {
-		t.Fatalf("unexpected identifier text: %s", identifier.Text())
-	}
-
-	mimeType := dataObject.SelectElement("xades:MimeType")
-	if mimeType == nil || mimeType.Text() != "text/xml" {
-		t.Fatalf("unexpected mime type content")
+	if opts.DataObjectFormat.ObjectIdentifier.Identifier.Value != "urn:oid:1.2.840.10003.5.109.10" {
+		t.Fatalf("unexpected identifier value: %s", opts.DataObjectFormat.ObjectIdentifier.Identifier.Value)
 	}
 }

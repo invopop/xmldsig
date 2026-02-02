@@ -6,14 +6,58 @@ import (
 	"time"
 )
 
+func TestNormalizeXMLDSigOptionsDefaults(t *testing.T) {
+	opts := normalizeXMLDSigOptions(nil)
+	if opts == nil {
+		t.Fatal("expected normalizeXMLDSigOptions to return non-nil options")
+	}
+	if opts.DataCanonicalizer == nil {
+		t.Fatal("expected DataCanonicalizer to be set")
+	}
+	if opts.DataHash != crypto.SHA512 {
+		t.Fatalf("expected DataHash to default to SHA512, got %v", opts.DataHash)
+	}
+	if opts.SignedInfoCanonicalizer == nil {
+		t.Fatal("expected SignedInfoCanonicalizer to be set")
+	}
+	if opts.SignedInfoHash != crypto.SHA256 {
+		t.Fatalf("expected SignedInfoHash to default to SHA256, got %v", opts.SignedInfoHash)
+	}
+	if opts.KeyInfoCanonicalizer == nil {
+		t.Fatal("expected KeyInfoCanonicalizer to default to inclusive canonicalizer")
+	}
+	if opts.KeyInfoHash != crypto.SHA512 {
+		t.Fatalf("expected KeyInfoHash to default to SHA512, got %v", opts.KeyInfoHash)
+	}
+}
+
+func TestNormalizeXMLDSigOptionsPreservesValues(t *testing.T) {
+	custom := &XMLDSigOptions{
+		DataHash:                     crypto.SHA384,
+		SignedInfoHash:               crypto.SHA224,
+		IncludeKeyValue:              true,
+		ReferenceKeyInfoInSignedInfo: true,
+	}
+	opts := normalizeXMLDSigOptions(custom)
+
+	if opts.DataHash != crypto.SHA384 {
+		t.Fatalf("expected DataHash to remain SHA384, got %v", opts.DataHash)
+	}
+	if opts.SignedInfoHash != crypto.SHA224 {
+		t.Fatalf("expected SignedInfoHash to remain SHA224, got %v", opts.SignedInfoHash)
+	}
+	if !opts.IncludeKeyValue {
+		t.Fatal("expected IncludeKeyValue to remain true")
+	}
+	if !opts.ReferenceKeyInfoInSignedInfo {
+		t.Fatal("expected ReferenceKeyInfoInSignedInfo to remain true")
+	}
+}
+
 func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 	opts := normalizeXAdESOptions(nil)
 	if opts == nil {
 		t.Fatal("expected normalizeXAdESOptions to return non-nil options")
-	}
-
-	if opts.DataHash != crypto.SHA512 {
-		t.Fatalf("expected DataHash to default to SHA512, got %v", opts.DataHash)
 	}
 	if opts.TimestampFormatter == nil {
 		t.Fatal("expected TimestampFormatter to be set")
@@ -24,56 +68,60 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 	if opts.IssuerSerializer == nil {
 		t.Fatal("expected IssuerSerializer to be set")
 	}
-	if opts.CertificateHash != crypto.SHA512 {
-		t.Fatalf("expected CertificateHash to default to SHA512, got %v", opts.CertificateHash)
+	if opts.SigningCertificateHash != crypto.SHA512 {
+		t.Fatalf("expected SigningCertificateHash to default to SHA512, got %v", opts.SigningCertificateHash)
+	}
+	if opts.SignedPropertiesCanonicalizer == nil {
+		t.Fatal("expected SignedPropertiesCanonicalizer to be set")
 	}
 	if opts.SignedPropertiesHash != crypto.SHA512 {
 		t.Fatalf("expected SignedPropertiesHash to default to SHA512, got %v", opts.SignedPropertiesHash)
-	}
-	if opts.SignedInfoCanonicalizer == nil {
-		t.Fatal("expected SignedInfoCanonicalizer to be set")
-	}
-	if opts.SignedInfoHash != crypto.SHA256 {
-		t.Fatalf("expected SignedInfoHash to default to SHA256, got %v", opts.SignedInfoHash)
-	}
-	if opts.KeyInfoCanonicalizer != nil {
-		t.Fatal("expected KeyInfoCanonicalizer to default to nil")
-	}
-	if opts.AttachQualifyingProperties {
-		t.Fatal("expected AttachQualifyingProperties to default to false")
 	}
 }
 
 func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
 	custom := &XAdESOptions{
-		DataHash:                   crypto.SHA384,
-		SignedInfoHash:             crypto.SHA384,
-		AttachQualifyingProperties: true,
+		SigningCertificateHash: crypto.SHA1,
+		SignedPropertiesHash:   crypto.SHA224,
 	}
-
 	opts := normalizeXAdESOptions(custom)
 
-	if opts.DataHash != crypto.SHA384 {
-		t.Fatalf("expected DataHash to remain SHA384, got %v", opts.DataHash)
+	if opts.SigningCertificateHash != crypto.SHA1 {
+		t.Fatalf("expected SigningCertificateHash to remain SHA1, got %v", opts.SigningCertificateHash)
 	}
-	if opts.SignedInfoHash != crypto.SHA384 {
-		t.Fatalf("expected SignedInfoHash to remain SHA384, got %v", opts.SignedInfoHash)
-	}
-	if !opts.AttachQualifyingProperties {
-		t.Fatal("expected AttachQualifyingProperties to remain true")
+	if opts.SignedPropertiesHash != crypto.SHA224 {
+		t.Fatalf("expected SignedPropertiesHash to remain SHA224, got %v", opts.SignedPropertiesHash)
 	}
 }
 
-func TestWithRawOptions(t *testing.T) {
-	raw := XAdESOptions{
-		DataHash: crypto.SHA1,
-	}
-	opt := WithRawOptions(raw)
+func TestWithXMLDSigOptions(t *testing.T) {
+	raw := XMLDSigOptions{IncludeKeyValue: true}
+	opt := WithXMLDSigOptions(raw)
 	o := &options{}
 	if err := opt(o); err != nil {
-		t.Fatalf("WithRawOptions returned error: %v", err)
+		t.Fatalf("WithXMLDSigOptions returned error: %v", err)
 	}
-	if o.xadesOptions.DataHash != crypto.SHA1 {
-		t.Fatalf("expected DataHash to be SHA1, got %v", o.xadesOptions.DataHash)
+	if !o.xmlOptions.IncludeKeyValue {
+		t.Fatal("expected IncludeKeyValue to be true")
+	}
+}
+
+func TestWithXAdESOptions(t *testing.T) {
+	raw := XAdESOptions{
+		Role: func() *[]string {
+			roles := []string{"issuer"}
+			return &roles
+		}(),
+	}
+	opt := WithXAdESOptions(raw)
+	o := &options{}
+	if err := opt(o); err != nil {
+		t.Fatalf("WithXAdESOptions returned error: %v", err)
+	}
+	if o.xadesOptions == nil {
+		t.Fatal("expected xadesOptions to be set")
+	}
+	if o.xadesOptions.Role == nil || len(*o.xadesOptions.Role) != 1 || (*o.xadesOptions.Role)[0] != "issuer" {
+		t.Fatalf("expected Role to be cloned, got %+v", o.xadesOptions.Role)
 	}
 }

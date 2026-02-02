@@ -1,7 +1,6 @@
 package xmldsig
 
 import (
-	"crypto"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
@@ -10,31 +9,19 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// WithKSeF configures the signer to use defaults required by the Polish KSeF platform.
-func WithKSeF() Option {
-	return func(o *options) error {
-		o.xadesOptions = ksefXAdESOptions()
-		return nil
+// KSeFXMLDSigOptions returns canonical XMLDSig settings required by the Polish KSeF profile.
+func KSeFXMLDSigOptions() XMLDSigOptions {
+	return XMLDSigOptions{
+		SignedInfoCanonicalizer: dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),
 	}
 }
 
-func ksefXAdESOptions() XAdESOptions {
+// KSeFXAdESOptions returns the KSeF-specific XAdES configuration.
+func KSeFXAdESOptions() XAdESOptions {
 	// List of allowed canonicalizers: https://github.com/CIRFMF/ksef-docs/blob/main/auth/podpis-xades.md
 	return XAdESOptions{
-		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(), // outermost element, so inclusive and exclusive canonicalizers work identically
-		DataHash:                                crypto.SHA512,                     // SHA-256 works too
-		TimestampFormatter:                      ksefTimestampFormatter,
-		IssuerSerializer:                        ksefIssuerSerializer,
-		AttachQualifyingProperties:              true,
-		SignedSignaturePropertiesCustomElements: nil,
-		SignedPropertiesCustomElements:          nil,
-		SignedPropertiesCanonicalizer:           dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),
-		CertificateHash:                         crypto.SHA512, // SHA-256 works too
-		SignedPropertiesHash:                    crypto.SHA512, // SHA-256 works too
-		KeyInfoHash:                             0,
-		SignedInfoCanonicalizer:                 dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""), // inclusive works too
-		SignedInfoHash:                          crypto.SHA256,
-		IncludeKeyValue:                         false,
+		TimestampFormatter: ksefTimestampFormatter,
+		IssuerSerializer:   ksefIssuerSerializer,
 	}
 }
 

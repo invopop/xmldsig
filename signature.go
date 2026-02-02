@@ -138,7 +138,7 @@ const (
 	signatureRootIDFormat           = "Signature-%s-Signature"
 	sigPropertiesIDFormat           = "Signature-%s-SignedProperties"
 	sigQualifyingPropertiesIDFormat = "Signature-%s-QualifyingProperties"
-	signedDataReferenceID           = "Reference" // used by SignedPropertiesCustomElements configuration when wiring ObjectReference
+	signedDataReferenceID           = "Reference-%s"
 	certificateIDFormat             = "Certificate-%s"
 )
 
@@ -157,7 +157,10 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		return nil, errors.New("cannot sign without a certificate")
 	}
 
-	o.xadesOptions = *normalizeXAdESOptions(&o.xadesOptions)
+	o.xmlOptions = *normalizeXMLDSigOptions(&o.xmlOptions)
+	if o.xadesOptions != nil {
+		o.xadesOptions = normalizeXAdESOptions(o.xadesOptions)
+	}
 
 	// Extract root namespaces
 	if err := addRootNamespaces(o.namespaces, data); err != nil {
@@ -171,7 +174,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		DSigNamespace: NamespaceDSig,
 	}
 
-	if o.xadesOptions.AttachQualifyingProperties {
+	if o.xadesOptions != nil {
 		if err := s.buildQualifyingProperties(); err != nil {
 			return nil, fmt.Errorf("qualifying properties: %w", err)
 		}
@@ -188,7 +191,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	}
 
 	if o.timestampURL != "" {
-		if !o.xadesOptions.AttachQualifyingProperties || s.Object == nil || s.Object.QualifyingProperties == nil {
+		if o.xadesOptions == nil || s.Object == nil || s.Object.QualifyingProperties == nil {
 			return nil, errors.New("timestamp requires qualifying properties")
 		}
 		timestamp, timestampErr := buildTimestampValue(s.Value, o.timestampURL)
@@ -241,11 +244,14 @@ func (s *Signature) buildQualifyingProperties() error {
 }
 
 func (s *Signature) buildSignedPropertiesElement() (*etree.Element, error) {
+	if s.opts.xadesOptions == nil {
+		return nil, errors.New("missing xades options")
+	}
 	cert := s.opts.cert
 	if cert == nil {
 		return nil, errors.New("missing certificate")
 	}
-	certHash := s.opts.xadesOptions.CertificateHash
+	certHash := s.opts.xadesOptions.SigningCertificateHash
 	fingerprint, err := cert.Fingerprint(certHash)
 	if err != nil {
 		return nil, fmt.Errorf("certificate fingerprint: %w", err)
@@ -272,6 +278,10 @@ func (s *Signature) buildSignedPropertiesElement() (*etree.Element, error) {
 	issuerSerial.CreateElement("ds:X509IssuerName").SetText(s.serializeIssuer(cert))
 	issuerSerial.CreateElement("ds:X509SerialNumber").SetText(cert.SerialNumber())
 
+	addSignerRoles(signedSignatureProps, s.opts.xadesOptions.Role)
+	addPolicyIdentifier(signedSignatureProps, s.opts.xadesOptions.PolicyIdentifier)
+	addDataObjectFormat(el, s.opts.xadesOptions.DataObjectFormat, fmt.Sprintf(signedDataReferenceID, s.opts.docID))
+
 	appendCustomElements(el, s.opts.xadesOptions.SignedPropertiesCustomElements)
 	appendCustomElements(signedSignatureProps, s.opts.xadesOptions.SignedSignaturePropertiesCustomElements)
 
@@ -279,8 +289,10 @@ func (s *Signature) buildSignedPropertiesElement() (*etree.Element, error) {
 }
 
 func (s *Signature) serializeIssuer(cert *Certificate) string {
-	if serializer := s.opts.xadesOptions.IssuerSerializer; serializer != nil && cert.issuer != nil {
-		return serializer(*cert.issuer)
+	if s.opts.xadesOptions != nil {
+		if serializer := s.opts.xadesOptions.IssuerSerializer; serializer != nil && cert.issuer != nil {
+			return serializer(*cert.issuer)
+		}
 	}
 	return cert.Issuer()
 }
@@ -297,6 +309,97 @@ func appendCustomElements(parent *etree.Element, elements *[]*etree.Element) {
 	}
 }
 
+func addSignerRoles(parent *etree.Element, roles *[]string) {
+	if parent == nil || roles == nil {
+		return
+	}
+	roleValues := make([]string, 0, len(*roles))
+	for _, r := range *roles {
+		if r == "" {
+			continue
+		}
+		roleValues = append(roleValues, r)
+	}
+	if len(roleValues) == 0 {
+		return
+	}
+	roleElement := parent.CreateElement("xades:SignerRole")
+	claimedRoles := roleElement.CreateElement("xades:ClaimedRoles")
+	for _, r := range roleValues {
+		claimedRoles.CreateElement("xades:ClaimedRole").SetText(r)
+	}
+}
+
+func addPolicyIdentifier(parent *etree.Element, policy *PolicyIdentifier) {
+	if parent == nil || policy == nil {
+		return
+	}
+	if policy.Identifier.Value == "" {
+		return
+	}
+	root := parent.CreateElement("xades:SignaturePolicyIdentifier")
+	signaturePolicyID := root.CreateElement("xades:SignaturePolicyId")
+	sigPolicyID := signaturePolicyID.CreateElement("xades:SigPolicyId")
+	appendIdentifierElement(sigPolicyID, "xades:Identifier", policy.Identifier)
+	if policy.Description != "" {
+		sigPolicyID.CreateElement("xades:Description").SetText(policy.Description)
+	}
+	if policy.DigestMethodAlgorithm != "" || policy.DigestValue != "" {
+		sigPolicyHash := signaturePolicyID.CreateElement("xades:SigPolicyHash")
+		if policy.DigestMethodAlgorithm != "" {
+			digestMethod := sigPolicyHash.CreateElement("ds:DigestMethod")
+			digestMethod.CreateAttr("Algorithm", policy.DigestMethodAlgorithm)
+		}
+		if policy.DigestValue != "" {
+			sigPolicyHash.CreateElement("ds:DigestValue").SetText(policy.DigestValue)
+		}
+	}
+}
+
+func addDataObjectFormat(parent *etree.Element, format *DataObjectFormat, referenceID string) {
+	if parent == nil || format == nil {
+		return
+	}
+	signedDataObjectProps := parent.FindElement("xades:SignedDataObjectProperties")
+	if signedDataObjectProps == nil {
+		signedDataObjectProps = parent.CreateElement("xades:SignedDataObjectProperties")
+	}
+	dataObjectFormat := signedDataObjectProps.CreateElement("xades:DataObjectFormat")
+	objectReference := format.ObjectReference
+	if objectReference == "" {
+		objectReference = "#" + referenceID
+	}
+	dataObjectFormat.CreateAttr("ObjectReference", objectReference)
+	if format.Description != "" {
+		dataObjectFormat.CreateElement("xades:Description").SetText(format.Description)
+	}
+	if format.ObjectIdentifier != nil {
+		objectIdentifier := dataObjectFormat.CreateElement("xades:ObjectIdentifier")
+		appendIdentifierElement(objectIdentifier, "xades:Identifier", format.ObjectIdentifier.Identifier)
+		if format.ObjectIdentifier.Description != "" {
+			objectIdentifier.CreateElement("xades:Description").SetText(format.ObjectIdentifier.Description)
+		}
+	}
+	if format.MimeType != "" {
+		dataObjectFormat.CreateElement("xades:MimeType").SetText(format.MimeType)
+	}
+	if format.Encoding != "" {
+		dataObjectFormat.CreateElement("xades:Encoding").SetText(format.Encoding)
+	}
+}
+
+func appendIdentifierElement(parent *etree.Element, tag string, id Identifier) *etree.Element {
+	if parent == nil || id.Value == "" {
+		return nil
+	}
+	el := parent.CreateElement(tag)
+	if id.Qualifier != "" {
+		el.CreateAttr("Qualifier", id.Qualifier)
+	}
+	el.SetText(id.Value)
+	return el
+}
+
 func (s *Signature) buildKeyInfo() {
 	certificate := s.opts.cert
 	info := &KeyInfo{
@@ -308,7 +411,7 @@ func (s *Signature) buildKeyInfo() {
 		},
 	}
 
-	if s.opts.xadesOptions.IncludeKeyValue {
+	if s.opts.xmlOptions.IncludeKeyValue {
 		privateKeyInfo := certificate.PrivateKeyInfo()
 		if privateKeyInfo != nil {
 			if keyValue := buildKeyValue(privateKeyInfo); keyValue != nil {
@@ -355,11 +458,11 @@ func buildKeyValue(info *PrivateKeyInfo) *KeyValue {
 // buildSignedInfo will add namespaces to the original properties
 // as part of canonicalization, so we expect copies here.
 func (s *Signature) buildSignedInfo() error {
-	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xadesOptions.SignedInfoHash, s.opts.cert.PublicKeyAlgorithm())
+	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xmlOptions.SignedInfoHash, s.opts.cert.PublicKeyAlgorithm())
 	if err != nil {
 		return fmt.Errorf("signature method: %w", err)
 	}
-	signedInfoCanonicalizer := s.opts.xadesOptions.SignedInfoCanonicalizer
+	signedInfoCanonicalizer := s.opts.xmlOptions.SignedInfoCanonicalizer
 
 	si := &SignedInfo{
 		CanonicalizationMethod: &AlgorithmMethod{
@@ -372,8 +475,8 @@ func (s *Signature) buildSignedInfo() error {
 	}
 
 	// Add the document digest
-	dataCanonicalizer := s.opts.xadesOptions.DataCanonicalizer
-	dataHash := s.opts.xadesOptions.DataHash
+	dataCanonicalizer := s.opts.xmlOptions.DataCanonicalizer
+	dataHash := s.opts.xmlOptions.DataHash
 	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize document: %w", err)
@@ -391,7 +494,7 @@ func (s *Signature) buildSignedInfo() error {
 		docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
 	}
 	si.Reference = append(si.Reference, &Reference{
-		ID:   signedDataReferenceID,
+		ID:   fmt.Sprintf(signedDataReferenceID, s.opts.docID),
 		Type: "http://www.w3.org/2000/09/xmldsig#Object",
 		URI:  "",
 		Transforms: &Transforms{
@@ -405,9 +508,10 @@ func (s *Signature) buildSignedInfo() error {
 	ns := s.opts.namespaces.Add(DSig, NamespaceDSig)
 
 	// Add key info digest, if enabled
-	keyInfoCanonicalizer := s.opts.xadesOptions.KeyInfoCanonicalizer
-	keyInfoHash := s.opts.xadesOptions.KeyInfoHash
-	if keyInfoHash != 0 && keyInfoCanonicalizer != nil {
+	if s.opts.xmlOptions.ReferenceKeyInfoInSignedInfo {
+		keyInfoCanonicalizer := s.opts.xmlOptions.KeyInfoCanonicalizer
+		keyInfoHash := s.opts.xmlOptions.KeyInfoHash
+
 		keyInfoBytes, err := xml.Marshal(s.KeyInfo)
 		if err != nil {
 			return fmt.Errorf("marshal key info: %w", err)
@@ -434,7 +538,7 @@ func (s *Signature) buildSignedInfo() error {
 	}
 
 	// Finally, if enabled, add the XAdES digests
-	if s.opts.xadesOptions.AttachQualifyingProperties {
+	if s.opts.xadesOptions != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
 		signedPropsCanonicalizer := s.opts.xadesOptions.SignedPropertiesCanonicalizer
@@ -482,12 +586,12 @@ func (s *Signature) buildSignatureValue() error {
 		return err
 	}
 	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace) // namespace of ds:Signature
-	data, err = canonicalizeWith(data, ns, s.opts.xadesOptions.SignedInfoCanonicalizer)
+	data, err = canonicalizeWith(data, ns, s.opts.xmlOptions.SignedInfoCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xadesOptions.SignedInfoHash)
+	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmlOptions.SignedInfoHash)
 	if err != nil {
 		return fmt.Errorf("sign SignedInfo: %w", err)
 	}

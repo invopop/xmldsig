@@ -19,7 +19,8 @@ type options struct {
 	namespaces   Namespaces // map of namespace name to URL
 	timestampURL string
 	cert         *Certificate
-	xadesOptions XAdESOptions
+	xmlOptions   XMLDSigOptions
+	xadesOptions *XAdESOptions
 	timeNow      func() time.Time
 }
 
@@ -48,10 +49,18 @@ func WithTimestamp(url string) Option {
 	}
 }
 
-// WithRawOptions allows callers to control the low-level XAdES behavior directly.
-func WithRawOptions(opts XAdESOptions) Option {
+// WithXMLDSigOptions allows passing custom options overriding default XMLDSig settings.
+func WithXMLDSigOptions(opts XMLDSigOptions) Option {
 	return func(o *options) error {
-		o.xadesOptions = opts
+		o.xmlOptions = opts
+		return nil
+	}
+}
+
+// WithXAdESOptions enables XAdES support and allows passing options overriding default XAdES settings.
+func WithXAdESOptions(opts XAdESOptions) Option {
+	return func(o *options) error {
+		o.xadesOptions = &opts
 		return nil
 	}
 }

@@ -12,32 +12,30 @@ import (
 	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
-func TestWithKSeFOptions(t *testing.T) {
-	opt := WithKSeF()
-	o := &options{}
-	if err := opt(o); err != nil {
-		t.Fatalf("WithKSeF returned error: %v", err)
-	}
+func TestKSeFXMLDSigOptions(t *testing.T) {
+	opts := KSeFXMLDSigOptions()
+	opts = *normalizeXMLDSigOptions(&opts)
 
-	opts := o.xadesOptions
+	if opts.IncludeKeyValue {
+		t.Fatalf("expected IncludeKeyValue to be false")
+	}
+	if opts.ReferenceKeyInfoInSignedInfo {
+		t.Fatalf("expected ReferenceKeyInfoInSignedInfo to be false")
+	}
+	if opts.SignedInfoCanonicalizer == nil {
+		t.Fatalf("expected SignedInfoCanonicalizer to be set")
+	}
+	if opts.SignedInfoCanonicalizer.Algorithm() != dsig.CanonicalXML10ExclusiveAlgorithmId {
+		t.Fatalf("unexpected SignedInfoCanonicalizer algorithm: %s", opts.SignedInfoCanonicalizer.Algorithm())
+	}
+	if opts.SignedInfoHash != crypto.SHA256 {
+		t.Fatalf("unexpected SignedInfoHash: %v", opts.SignedInfoHash)
+	}
+}
 
-	if opts.DataCanonicalizer == nil {
-		t.Fatalf("expected DataCanonicalizer to be set")
-	}
-	if opts.DataCanonicalizer.Algorithm() != dsig.CanonicalXML10RecAlgorithmId {
-		t.Fatalf("unexpected DataCanonicalizer algorithm: %s", opts.DataCanonicalizer.Algorithm())
-	}
-	if opts.DataHash != crypto.SHA512 {
-		t.Fatalf("unexpected DataHash: %v", opts.DataHash)
-	}
-
-	if opts.TimestampFormatter == nil {
-		t.Fatalf("expected TimestampFormatter to be set")
-	}
-	ts := time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("CET", 3600))
-	if got := opts.TimestampFormatter(ts); got != "2024-01-02T02:04:05.0000000+00:00" {
-		t.Fatalf("unexpected timestamp format: %s", got)
-	}
+func TestKSeFXAdESOptions(t *testing.T) {
+	opts := KSeFXAdESOptions()
+	opts = *normalizeXAdESOptions(&opts)
 
 	if opts.IssuerSerializer == nil {
 		t.Fatalf("expected IssuerSerializer to be set")
@@ -57,27 +55,12 @@ func TestWithKSeFOptions(t *testing.T) {
 		t.Fatalf("unexpected SignedPropertiesCanonicalizer algorithm: %s", opts.SignedPropertiesCanonicalizer.Algorithm())
 	}
 
-	if opts.CertificateHash != crypto.SHA512 {
-		t.Fatalf("unexpected CertificateHash: %v", opts.CertificateHash)
+	if opts.TimestampFormatter == nil {
+		t.Fatalf("expected TimestampFormatter to be set")
 	}
-	if opts.SignedPropertiesHash != crypto.SHA512 {
-		t.Fatalf("unexpected SignedPropertiesHash: %v", opts.SignedPropertiesHash)
-	}
-	if opts.KeyInfoHash != 0 {
-		t.Fatalf("expected KeyInfoHash to be zero, got %v", opts.KeyInfoHash)
-	}
-	if opts.KeyInfoCanonicalizer != nil {
-		t.Fatal("expected KeyInfoCanonicalizer to be nil")
-	}
-
-	if opts.SignedInfoCanonicalizer == nil {
-		t.Fatalf("expected SignedInfoCanonicalizer to be set")
-	}
-	if opts.SignedInfoCanonicalizer.Algorithm() != dsig.CanonicalXML10ExclusiveAlgorithmId {
-		t.Fatalf("unexpected SignedInfoCanonicalizer algorithm: %s", opts.SignedInfoCanonicalizer.Algorithm())
-	}
-	if opts.SignedInfoHash != crypto.SHA256 {
-		t.Fatalf("unexpected SignedInfoHash: %v", opts.SignedInfoHash)
+	ts := time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("CET", 3600))
+	if got := opts.TimestampFormatter(ts); got != "2024-01-02T02:04:05.0000000+00:00" {
+		t.Fatalf("unexpected timestamp format: %s", got)
 	}
 }
 

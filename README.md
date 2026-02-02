@@ -19,33 +19,42 @@ The library supports multiple configuration options. It's possible to specify op
 - whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
 - whether to include the public key value (RSA or ECDSA) in KeyInfo (some APIs require it, some don't)
 
-For convenience, there are **predefined** settings:
+For convenience, there are **predefined option builders**:
 
-- `xmldsig.WithFacturaE` - Spanish FacturaE
-- `xmldsig.WithKSeF` - Polish KSeF
+- `xmldsig.FacturaeXMLDSigOptions()` together with `xmldsig.FacturaeXAdESOptions()` for Spanish FacturaE
+- `xmldsig.KSeFXMLDSigOptions()` together with `xmldsig.KSeFXAdESOptions()` for Polish KSeF
 
-For other APIs, it's possible to provide appropriate settings by creating a struct of type `xmldsig.XAdESOptions` manually, and passing it to `xmldsig.WithRawOptions` method. Note that using `xmldsig.WithRawOptions` is not compatible with using a predefined setting.
+For other APIs, it's possible to provide appropriate settings by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESOptions`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdESOptions` respectively. Using these functions is not compatible with predefined settings.
 
 ### Example of custom configuration
 
 ```go
-	return XAdESOptions{
-		AttachQualifyingProperties:              true,                              // Whether to attach QualifyingProperties element, containing XAdES-specific elements
-		SignedSignaturePropertiesCustomElements: nil,                               // Custom elements to include in SignedSignatureProperties (nil to skip)
-		SignedPropertiesCustomElements:          nil,                               // Custom elements to include in SignedProperties (nil to skip)
-		DataCanonicalizer:                       dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the outermost element (inclusive and exclusive canonicalizers work identically anyway)
-		DataHash:                                crypto.SHA512,                     // Hash algorithm for hashing the outermost element - the hash will then be included in a Reference element
-		TimestampFormatter:                      customTimestampFormatter,          // Timestamp formatter for the Timestamp element
-		IssuerSerializer:                        nil,                               // Serializer for the Issuer element in SignedProperties, containing information about certificate issuer (nil for default one)
-		SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the SignedProperties element
-		SignedPropertiesHash:                    crypto.SHA512,											// Hash algorithm for the SignedProperties element
-		CertificateHash:                         crypto.SHA512, 										// Hash algorithm for the certificate, for xades:CertDigest element
-		KeyInfoCanonicalizer:                    nil, 															// Canonicalization algorithm for the KeyInfo element - must be non-nil to add reference to KeyInfo in SignedInfo
-		KeyInfoHash:                             0, 																// Hash algorithm for the KeyInfo element - must be non-zero to add reference to KeyInfo in SignedInfo
-		SignedInfoCanonicalizer:                 dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for the SignedInfo element
-		SignedInfoHash:                          crypto.SHA256,											// Hash algorithm for the SignedInfo element
-		IncludeKeyValue:                         false, 														// Whether to include the public key value (RSA or ECDSA) in KeyInfo
-	}
+xmlOpts := xmldsig.XMLDSigOptions{
+	DataCanonicalizer:       dsig.MakeC14N10RecCanonicalizer(), // Canonicalize the XML that is signed
+	DataHash:                crypto.SHA512,                     // Hash algorithm for the signed XML
+	SignedInfoCanonicalizer: dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for SignedInfo
+	SignedInfoHash:          crypto.SHA256,                     // Hash algorithm for SignedInfo
+	IncludeKeyValue:         false,                             // Whether to include the public key in KeyInfo
+	ReferenceKeyInfoInSignedInfo: true,                         // Whether SignedInfo should reference KeyInfo
+	KeyInfoCanonicalizer:         dsig.MakeC14N10RecCanonicalizer(),
+	KeyInfoHash:                  crypto.SHA512,
+}
+
+xadesOpts := xmldsig.XAdESOptions{
+	TimestampFormatter:            customTimestampFormatter,          // Timestamp formatter for SigningTime
+	IssuerSerializer:              nil,                               // Serializer for issuer names, nil for default
+	SignedSignaturePropertiesCustomElements: nil,                     // Custom SignedSignatureProperties entries (rare)
+	SignedPropertiesCustomElements:          nil,                     // Custom SignedProperties entries (rare)
+	SignedPropertiesCanonicalizer:           dsig.MakeC14N10RecCanonicalizer(),
+	SignedPropertiesHash:                    crypto.SHA512,
+	SigningCertificateHash:                  crypto.SHA512,
+}
+
+signature, err := xmldsig.Sign(data,
+	xmldsig.WithCertificate(cert),
+	xmldsig.WithXMLDSigOptions(xmlOpts),
+	xmldsig.WithXAdESOptions(xadesOpts),
+)
 ```
 
 Example of a custom timestamp formatter:
@@ -80,7 +89,8 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	authTokenRequest.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithKSeF(),
+		xmldsig.WithXMLDSigOptions(xmldsig.KSeFXMLDSigOptions()),
+		xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions()),
 	)
 
 	// Now output the data
@@ -105,7 +115,7 @@ func main() {
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	xades := &xmldsig.FacturaEConfig{
+	facturaeOptions := &xmldsig.FacturaEConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.FacturaEPolicyConfig{
@@ -119,7 +129,8 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithFacturaE(xades),
+		xmldsig.WithXMLDSigOptions(xmldsig.FacturaeXMLDSigOptions()),
+		xmldsig.WithXAdESOptions(xmldsig.FacturaeXAdESOptions(facturaeOptions)),
 	)
 
 	// Now output the data
@@ -134,7 +145,7 @@ Support is also included for using a Time Stamp Authority (TSA). Simply add the 
 xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA) // uses https://freetsa.org/tsr
 ```
 
-Using this option requires `AttachQualifyingProperties` to be true, as the timestamp is added to `QualifyingProperties` > `UnsignedProperties` > `SignatureTimestamp` element.
+Using this option requires XAdES support to be enabled (by calling `WithXAdESOptions`), as the timestamp is added to `QualifyingProperties` > `UnsignedProperties` > `SignatureTimestamp`.
 
 ## Certificates
 
@@ -166,15 +177,10 @@ openssl pkcs12 -export -out invopop.p12 -inkey invopop.key -in invopop.crt -cert
 
 Before this change, the library was performing canonicalization on the signed data and `SignedProperties` elements, but was not adding appropriate `Transform` elements, describing the canonicalization method, to the `SignedInfo` element.
 
-### Renamed methods
+### Updated methods
 
-The following types and methods were renamed, as they were accepting options specific to Spanish FacturaE, not general XAdES options:
-
-- `xmldsig.XAdESConfig` to `xmldsig.FacturaEConfig`
-- `xmldsig.WithXAdES` to `xmldsig.WithFacturaE`
-- `xmldsig.XAdESPolicyConfig` to `xmldsig.FacturaEPolicyConfig`
-
-Old names are still kept in the code as aliases of the new names, but are marked as deprecated.
+- `xmldsig.WithXAdES` and `xmldsig.WithFacturaE` have been replaced by the combination of `xmldsig.WithXMLDSigOptions(xmldsig.FacturaeXMLDSigOptions())` and `xmldsig.WithXAdESOptions(xmldsig.FacturaeXAdESOptions(...))`.
+- `xmldsig.WithKSeF` has been replaced by `xmldsig.WithXMLDSigOptions(xmldsig.KSeFXMLDSigOptions())` and `xmldsig.WithXAdESOptions(xmldsig.KSeFXAdESOptions())`.
 
 ## Copyright
 
