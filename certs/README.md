@@ -11,3 +11,5 @@ Apple's "Keychain Access" tool works well for this. First import that original `
 ## .pfx certificate
 
 Certificate in `cert-20260102-131809.pfx` is a self-signed certificate usable for testing integration with KSeF.
+
+Note that it expires in 1 year from the date it was created. It will be necessary to generate a new one after that date, and update the tests with the new file name.

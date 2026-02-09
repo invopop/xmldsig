@@ -4,16 +4,16 @@
 
 These options allow configuring specific behavior at the XMLDSig level. To provide custom values, use `WithXMLDSigOptions` function with a struct overriding the defaults. Not using the function at all, or providing an empty struct, will result in default values being used.
 
-| Field | Type | Description | Default |
-| ----- | ---- | ----------- | ------- |
-| `DataCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed | Inclusive C14N10
-| `DataHash` | `crypto.Hash` | Hash algorithm used on the XML being signed | SHA512
-| `IncludeKeyValue` | `bool` | Whether to include the public key value (RSA or ECDSA) in `KeyInfo` | false |
-| `ReferenceKeyInfoInSignedInfo` | `bool` | Whether to include hash of `KeyInfo` element in `SignedInfo` > `Reference` | false |
-| `KeyInfoHash` | `crypto.Hash` | Hash algorithm used on `KeyInfo`; useful only when `IncludeKeyInfoInSignedInfo` is true | SHA512
-| `KeyInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `KeyInfo`; useful only when `IncludeKeyInfoInSignedInfo` is true | Inclusive C14N10
-| `SignedInfoCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo` | Inclusive C14N10 |
-| `SignedInfoHash` | `crypto.Hash` | Hash algorithm used on `SignedInfo` | SHA256 |
+| Field                          | Type                 | Description                                                                             | Default          |
+| ------------------------------ | -------------------- | --------------------------------------------------------------------------------------- | ---------------- |
+| `DataCanonicalizer`            | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed                                              | Inclusive C14N10 |
+| `DataHash`                     | `crypto.Hash`        | Hash algorithm used on the XML being signed                                             | SHA512           |
+| `IncludeKeyValue`              | `bool`               | Whether to include the public key value (RSA or ECDSA) in `KeyInfo`                     | false            |
+| `ReferenceKeyInfoInSignedInfo` | `bool`               | Whether to include hash of `KeyInfo` element in `SignedInfo` > `Reference`              | false            |
+| `KeyInfoHash`                  | `crypto.Hash`        | Hash algorithm used on `KeyInfo`; useful only when `IncludeKeyInfoInSignedInfo` is true | SHA512           |
+| `KeyInfoCanonicalizer`         | `dsig.Canonicalizer` | Canonicalizer used on `KeyInfo`; useful only when `IncludeKeyInfoInSignedInfo` is true  | Inclusive C14N10 |
+| `SignedInfoCanonicalizer`      | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo`                                                      | Inclusive C14N10 |
+| `SignedInfoHash`               | `crypto.Hash`        | Hash algorithm used on `SignedInfo`                                                     | SHA256           |
 
 Defaults that need to be overridden for FacturaE:
 
@@ -22,18 +22,18 @@ Defaults that need to be overridden for FacturaE:
 
 ## XAdES options
 
-These options allow configuring the XAdES level. To enable XAdES, use `WithXAdESOptions` function. A struct provided to the function will override the defaults. Providing an empty struct will result in fully using defaults.
+These options allow configuring the XAdES level. To enable XAdES, use `WithXAdES` function. A struct provided to the function will override the defaults. Providing an empty struct will result in fully using defaults.
 
-| Field | Type | Description | Default |
-| ----- | ---- | ----------- | ------- |
-| `TimestampFormatter` | `func(time.Time) string` | Function to format timestamps | with `2006-01-02T15:04:05+00:00` (converted to UTC) |
-| `IssuerSerializer` | `func(pkix.RDNSequence) string` | Function to serialize issuer information | `pkix.RDNSequence String` |
-| `SigningCertificateHash` | `crypto.Hash` | Hash algorithm on the certificate, in `SignedSignatureProperties > SigningCertificate` | SHA512 |
-| `SignedPropertiesCanonicalizer` | `dsig.Canonicalizer` | Canonicalizer used on `SignedProperties` in `SignedInfo` > `Reference` | Exclusive C14N10 |
-| `SignedPropertiesHash` | `crypto.Hash` | Hash algorithm used on `SignedProperties` in `SignedInfo` > `Reference` | SHA512 |
-| `Role` | `[]string` pointer to slice of strings | `SignedProperties > SignedSignatureProperties > SignerRole > ClaimedRoles > ClaimedRole` | empty slice |
-| `DataObjectFormat` | `*DataObjectFormat` pointer to struct | `SignedProperties > SignedDataObjectProperties > DataObjectFormat` | `nil` |
-| `PolicyIdentifier` | `*PolicyIdentifier` pointer to struct | `SignedProperties > SignedSignatureProperties > PolicyIdentifier` | `nil` |
+| Field                           | Type                                  | Description                                                                              | Default                                             |
+| ------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `TimestampFormatter`            | `func(time.Time) string`              | Function to format timestamps                                                            | with `2006-01-02T15:04:05+00:00` (converted to UTC) |
+| `IssuerSerializer`              | `func(pkix.RDNSequence) string`       | Function to serialize issuer information                                                 | `pkix.RDNSequence String`                           |
+| `SigningCertificateHash`        | `crypto.Hash`                         | Hash algorithm on the certificate, in `SignedSignatureProperties > SigningCertificate`   | SHA512                                              |
+| `SignedPropertiesCanonicalizer` | `dsig.Canonicalizer`                  | Canonicalizer used on `SignedProperties` in `SignedInfo` > `Reference`                   | Exclusive C14N10                                    |
+| `SignedPropertiesHash`          | `crypto.Hash`                         | Hash algorithm used on `SignedProperties` in `SignedInfo` > `Reference`                  | SHA512                                              |
+| `Role`                          | `XAdESSignerRole` (string)            | `SignedProperties > SignedSignatureProperties > SignerRole > ClaimedRoles > ClaimedRole` | empty slice                                         |
+| `DataObjectFormat`              | `*DataObjectFormat` pointer to struct | `SignedProperties > SignedDataObjectProperties > DataObjectFormat`                       | `nil`                                               |
+| `PolicyIdentifier`              | `*PolicyIdentifier` pointer to struct | `SignedProperties > SignedSignatureProperties > PolicyIdentifier`                        | `nil`                                               |
 
 For FacturaE:
 

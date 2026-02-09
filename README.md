@@ -39,7 +39,7 @@ xmlOpts := xmldsig.XMLDSigOptions{
 	KeyInfoHash:                  crypto.SHA512,
 }
 
-xadesOpts := xmldsig.XAdESOptions{
+xadesOpts := xmldsig.XAdESConfig{
 	TimestampFormatter:            customTimestampFormatter,          // Timestamp formatter for SigningTime
 	IssuerSerializer:              nil,                               // Serializer for issuer names, nil for default
 	SignedPropertiesCanonicalizer: dsig.MakeC14N10RecCanonicalizer(),
@@ -111,7 +111,7 @@ func main() {
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	facturaeOptions := xmldsig.XAdESOptions{
+	facturaeOptions := xmldsig.XAdESConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
