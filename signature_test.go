@@ -150,6 +150,22 @@ func TestSignature(t *testing.T) {
 		assert.Equal(t, "2024-03-15T10:11:12+00:00", sp.SignedSignatureProperties.SigningTime)
 	})
 
+	t.Run("should include RSA key elements after signing", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig()) // includes IncludeKeyValue: true
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmlOpt,
+			xadesOpt,
+		)
+		require.NoError(t, err)
+
+		require.NotNil(t, signature.KeyInfo, "KeyInfo should be present")
+		require.NotNil(t, signature.KeyInfo.KeyValue, "KeyValue should be present")
+		require.NotNil(t, signature.KeyInfo.KeyValue.RSA, "RSAKeyValue should be present")
+		assert.NotEmpty(t, signature.KeyInfo.KeyValue.RSA.Modulus, "Modulus should not be empty")
+		assert.NotEmpty(t, signature.KeyInfo.KeyValue.RSA.Exponent, "Exponent should not be empty")
+	})
+
 }
 
 func xadesConfig() xmldsig.XAdESConfig {

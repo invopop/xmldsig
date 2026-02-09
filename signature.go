@@ -100,11 +100,17 @@ type X509Data struct {
 // KeyValue contains the public key (optional, only specific APIs require it)
 type KeyValue struct {
 	// RSA (XMLDSIG 1.0)
-	Modulus  string `xml:"ds:RSAKeyValue>ds:Modulus,omitempty"`
-	Exponent string `xml:"ds:RSAKeyValue>ds:Exponent,omitempty"`
+	RSA *RSAKeyValue `xml:"ds:RSAKeyValue,omitempty"`
 
 	// EC (XMLDSIG 1.1)
 	EC *ECKeyValue `xml:"dsig11:ECKeyValue,omitempty"`
+}
+
+type RSAKeyValue struct {
+	XMLName xml.Name `xml:"ds:RSAKeyValue"`
+
+	Modulus  string `xml:"ds:Modulus,omitempty"`
+	Exponent string `xml:"ds:Exponent,omitempty"`
 }
 
 type ECKeyValue struct {
@@ -263,8 +269,10 @@ func buildKeyValue(info *PrivateKeyInfo) *KeyValue {
 			return nil
 		}
 		return &KeyValue{
-			Modulus:  info.Modulus,
-			Exponent: info.Exponent,
+			RSA: &RSAKeyValue{
+				Modulus:  info.Modulus,
+				Exponent: info.Exponent,
+			},
 		}
 	case KeyAlgorithmECDSA:
 		if info.CurveURI == "" || info.PublicKey == "" {
