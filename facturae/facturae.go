@@ -4,7 +4,7 @@ import (
 	"crypto/x509/pkix"
 	"time"
 
-	"github.com/MieszkoGulinski/xmldsig"
+	"github.com/invopop/xmldsig"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 

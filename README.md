@@ -2,10 +2,10 @@
 
 Partial implementation of the XML DSig and XAdES standards for Go. Accepts certificates in .p12/.pfx format and generates signatures typically used with UBL invoice documents or similar local standards.
 
-[![Lint](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/lint.yaml)
-[![Test Go](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/MieszkoGulinski/xmldsig/actions/workflows/test.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/MieszkoGulinski/xmldsig)](https://goreportcard.com/report/github.com/MieszkoGulinski/xmldsig)
-[![GoDoc](https://godoc.org/github.com/MieszkoGulinski/xmldsig?status.svg)](https://godoc.org/github.com/MieszkoGulinski/xmldsig)
+[![Lint](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml)
+[![Test Go](https://github.com/invopop/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/test.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/invopop/xmldsig)](https://goreportcard.com/report/github.com/invopop/xmldsig)
+[![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
 ![Latest Tag](https://img.shields.io/github/v/tag/MieszkoGulinski/xmldsig)
 
 ## Available settings

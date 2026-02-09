@@ -4,7 +4,7 @@ import (
 	"crypto"
 	"testing"
 
-	"github.com/MieszkoGulinski/xmldsig"
+	"github.com/invopop/xmldsig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

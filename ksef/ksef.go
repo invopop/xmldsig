@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/MieszkoGulinski/xmldsig"
+	"github.com/invopop/xmldsig"
 )
 
 // XAdESOptions returns the KSeF-specific XAdES configuration.
