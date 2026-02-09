@@ -142,7 +142,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		return nil, errors.New("cannot sign without a certificate")
 	}
 
-	o.xmlOptions = normalizeXMLDSigOptions(o.xmlOptions)
+	o.xmldsigConfig = normalizeXMLDSigConfig(o.xmldsigConfig)
 	// XAdES options are normalized in WithXAdES config function
 
 	// Extract root namespaces
@@ -157,7 +157,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		DSigNamespace: NamespaceDSig,
 	}
 
-	if o.xadesOptions != nil {
+	if o.xadesConfig != nil {
 		if err := s.buildQualifyingProperties(); err != nil {
 			return nil, fmt.Errorf("qualifying properties: %w", err)
 		}
@@ -174,7 +174,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	}
 
 	if o.timestampURL != "" {
-		if o.xadesOptions == nil || s.Object == nil || s.Object.QualifyingProperties == nil {
+		if o.xadesConfig == nil || s.Object == nil || s.Object.QualifyingProperties == nil {
 			return nil, errors.New("timestamp requires qualifying properties")
 		}
 		timestamp, timestampErr := buildTimestampValue(s.Value, o.timestampURL)
@@ -237,7 +237,7 @@ func (s *Signature) buildKeyInfo() {
 		},
 	}
 
-	if s.opts.xmlOptions.IncludeKeyValue {
+	if s.opts.xmldsigConfig.IncludeKeyValue {
 		privateKeyInfo := certificate.PrivateKeyInfo()
 		if privateKeyInfo != nil {
 			if keyValue := buildKeyValue(privateKeyInfo); keyValue != nil {
@@ -284,11 +284,11 @@ func buildKeyValue(info *PrivateKeyInfo) *KeyValue {
 // buildSignedInfo will add namespaces to the original properties
 // as part of canonicalization, so we expect copies here.
 func (s *Signature) buildSignedInfo() error {
-	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xmlOptions.SignedInfoHash, s.opts.cert.PublicKeyAlgorithm())
+	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xmldsigConfig.SignedInfoHash, s.opts.cert.PublicKeyAlgorithm())
 	if err != nil {
 		return fmt.Errorf("signature method: %w", err)
 	}
-	signedInfoCanonicalizer := s.opts.xmlOptions.SignedInfoCanonicalizer
+	signedInfoCanonicalizer := s.opts.xmldsigConfig.SignedInfoCanonicalizer
 
 	si := &SignedInfo{
 		CanonicalizationMethod: &AlgorithmMethod{
@@ -301,8 +301,8 @@ func (s *Signature) buildSignedInfo() error {
 	}
 
 	// Add the document digest
-	dataCanonicalizer := s.opts.xmlOptions.DataCanonicalizer
-	dataHash := s.opts.xmlOptions.DataHash
+	dataCanonicalizer := s.opts.xmldsigConfig.DataCanonicalizer
+	dataHash := s.opts.xmldsigConfig.DataHash
 	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize document: %w", err)
@@ -334,9 +334,9 @@ func (s *Signature) buildSignedInfo() error {
 	ns := s.opts.namespaces.Add(DSig, NamespaceDSig)
 
 	// Add key info digest, if enabled
-	if s.opts.xmlOptions.ReferenceKeyInfoInSignedInfo {
-		keyInfoCanonicalizer := s.opts.xmlOptions.KeyInfoCanonicalizer
-		keyInfoHash := s.opts.xmlOptions.KeyInfoHash
+	if s.opts.xmldsigConfig.ReferenceKeyInfoInSignedInfo {
+		keyInfoCanonicalizer := s.opts.xmldsigConfig.KeyInfoCanonicalizer
+		keyInfoHash := s.opts.xmldsigConfig.KeyInfoHash
 
 		keyInfoBytes, err := xml.Marshal(s.KeyInfo)
 		if err != nil {
@@ -364,10 +364,10 @@ func (s *Signature) buildSignedInfo() error {
 	}
 
 	// Finally, if enabled, add the XAdES digests
-	if s.opts.xadesOptions != nil {
+	if s.opts.xadesConfig != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
-		signedPropsCanonicalizer := s.opts.xadesOptions.SignedPropertiesCanonicalizer
+		signedPropsCanonicalizer := s.opts.xadesConfig.SignedPropertiesCanonicalizer
 		spBytes, err := xml.Marshal(sp)
 		if err != nil {
 			return fmt.Errorf("marshal signed properties: %w", err)
@@ -376,7 +376,7 @@ func (s *Signature) buildSignedInfo() error {
 		if err != nil {
 			return fmt.Errorf("canonicalize signed properties: %w", err)
 		}
-		signedPropsHash := s.opts.xadesOptions.SignedPropertiesHash
+		signedPropsHash := s.opts.xadesConfig.SignedPropertiesHash
 		spDigest, err := digestBytes(canonicalizedSignedProps, signedPropsHash)
 		if err != nil {
 			return fmt.Errorf("xades digest: %w", err)
@@ -412,12 +412,12 @@ func (s *Signature) buildSignatureValue() error {
 		return err
 	}
 	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace) // namespace of ds:Signature
-	data, err = canonicalizeWith(data, ns, s.opts.xmlOptions.SignedInfoCanonicalizer)
+	data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmlOptions.SignedInfoHash)
+	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash)
 	if err != nil {
 		return fmt.Errorf("sign SignedInfo: %w", err)
 	}

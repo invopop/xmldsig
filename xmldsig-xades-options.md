@@ -2,7 +2,7 @@
 
 ## XMLDSig options
 
-These options allow configuring specific behavior at the XMLDSig level. To provide custom values, use `WithXMLDSigOptions` function with a struct overriding the defaults. Not using the function at all, or providing an empty struct, will result in default values being used.
+These options allow configuring specific behavior at the XMLDSig level. To provide custom values, use `WithXMLDSigConfig` function with a struct overriding the defaults. Not using the function at all, or providing an empty struct, will result in default values being used.
 
 | Field                          | Type                 | Description                                                                               | Default          |
 | ------------------------------ | -------------------- | ----------------------------------------------------------------------------------------- | ---------------- |

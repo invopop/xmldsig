@@ -18,17 +18,17 @@ The library supports multiple configuration options. It's possible to specify op
 - whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
 - whether to include the public key value (RSA or ECDSA) in KeyInfo (some APIs require it, some don't)
 
-These options are passed to the library by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESConfig`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdES` respectively. Settings in these structs will override default settings.
+These options are passed to the library by creating structs of type `xmldsig.XMLDSigConfig` and `xmldsig.XAdESConfig`, and passing them to `xmldsig.WithXMLDSigConfig` and `xmldsig.WithXAdES` respectively. Settings in these structs will override default settings.
 
 For convenience, there are **predefined option builders**:
 
-- `facturae.XMLDSigOptions()` and `facturae.XAdESOptions()` for Spanish FacturaE
-- `ksef.XAdESOptions()` for Polish KSeF (no need to override XMLDSig defaults)
+- `facturae.XMLDSigConfig()` and `facturae.XAdESConfig()` for Spanish FacturaE
+- `ksef.XAdESConfig()` for Polish KSeF (no need to override XMLDSig defaults)
 
 ### Example of fully custom configuration, overriding all defaults
 
 ```go
-xmlOpts := xmldsig.XMLDSigOptions{
+xmlConfig := xmldsig.XMLDSigConfig{
 	DataCanonicalizer:            dsig.MakeC14N10RecCanonicalizer(), // Canonicalize the XML that is signed
 	DataHash:                     crypto.SHA512,                     // Hash algorithm for the signed XML
 	SignedInfoCanonicalizer:      dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for SignedInfo
@@ -39,7 +39,7 @@ xmlOpts := xmldsig.XMLDSigOptions{
 	KeyInfoHash:                  crypto.SHA512,
 }
 
-xadesOpts := xmldsig.XAdESConfig{
+xadesConfig := xmldsig.XAdESConfig{
 	TimestampFormatter:            customTimestampFormatter,          // Timestamp formatter for SigningTime
 	IssuerSerializer:              nil,                               // Serializer for issuer names, nil for default
 	SignedPropertiesCanonicalizer: dsig.MakeC14N10RecCanonicalizer(),
@@ -49,8 +49,8 @@ xadesOpts := xmldsig.XAdESConfig{
 
 signature, err := xmldsig.Sign(data,
 	xmldsig.WithCertificate(cert),
-	xmldsig.WithXMLDSigOptions(xmlOpts),
-	xmldsig.WithXAdES(xadesOpts),
+	xmldsig.WithXMLDSigConfig(xmlConfig),
+	xmldsig.WithXAdES(&xadesConfig),
 )
 ```
 
@@ -86,7 +86,7 @@ func main() {
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	authTokenRequest.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXAdES(ksef.XAdESOptions()),
+		xmldsig.WithXAdES(ksef.XAdESConfig()),
 	)
 
 	// Now output the data
@@ -111,7 +111,7 @@ func main() {
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	facturaeOptions := xmldsig.XAdESConfig{
+	facturaeConfig := facturae.XAdESConfig(xmldsig.XAdESConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
@@ -120,13 +120,13 @@ func main() {
 			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
 			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
 		},
-	}
+	})
 	data, _ := xml.Marshal(doc)
 	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
 	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXMLDSigOptions(facturae.XMLDSigOptions()),
-		xmldsig.WithXAdES(facturae.XAdESOptions(facturaeOptions)),
+		xmldsig.WithXMLDSigConfig(facturae.XMLDSigConfig()),
+		xmldsig.WithXAdES(&facturaeConfig),
 	)
 
 	// Now output the data
@@ -175,7 +175,7 @@ Before this change, the library was performing canonicalization on the signed da
 
 ### Updated methods
 
-- As FacturaE-specific options were previously hardcoded and now were moved to API-specific configuration, `xmldsig.WithXAdES` now must be combined with `xmldsig.WithXAdES(facturae.XAdESOptions(...))`.
+- As FacturaE-specific options were previously hardcoded and now were moved to API-specific configuration, `xmldsig.WithXAdES` now must be combined with `xmldsig.WithXAdES(facturae.XAdESConfig(...))`.
 
 ## Copyright
 

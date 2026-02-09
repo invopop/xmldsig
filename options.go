@@ -8,8 +8,8 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// XMLDSigOptions configures canonicalization, hashing, and KeyInfo handling for raw XML DSig signatures.
-type XMLDSigOptions struct {
+// XMLDSigConfig configures canonicalization, hashing, and KeyInfo handling for raw XML DSig signatures.
+type XMLDSigConfig struct {
 	DataCanonicalizer            dsig.Canonicalizer
 	DataHash                     crypto.Hash
 	IncludeKeyValue              bool
@@ -35,8 +35,8 @@ type XAdESConfig struct {
 	Policy           *XAdESPolicyConfig
 }
 
-// normalizeXMLDSigOptions fills missing XMLDSig values with defaults.
-func normalizeXMLDSigOptions(opts XMLDSigOptions) XMLDSigOptions {
+// normalizeXMLDSigConfig fills missing XMLDSig values with defaults.
+func normalizeXMLDSigConfig(opts XMLDSigConfig) XMLDSigConfig {
 
 	if opts.DataCanonicalizer == nil {
 		opts.DataCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
@@ -59,8 +59,8 @@ func normalizeXMLDSigOptions(opts XMLDSigOptions) XMLDSigOptions {
 	return opts
 }
 
-// normalizeXAdESOptions fills missing XAdES values with defaults.
-func normalizeXAdESOptions(opts *XAdESConfig) *XAdESConfig {
+// normalizeXAdESConfig fills missing XAdES values with defaults.
+func normalizeXAdESConfig(opts *XAdESConfig) *XAdESConfig {
 	if opts == nil {
 		opts = &XAdESConfig{}
 	}

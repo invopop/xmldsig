@@ -15,13 +15,13 @@ type Option func(o *options) error
 type Namespaces map[string]string
 
 type options struct {
-	docID        string
-	namespaces   Namespaces // map of namespace name to URL
-	timestampURL string
-	cert         *Certificate
-	xmlOptions   XMLDSigOptions
-	xadesOptions *XAdESConfig
-	timeNow      func() time.Time
+	docID         string
+	namespaces    Namespaces // map of namespace name to URL
+	timestampURL  string
+	cert          *Certificate
+	xmldsigConfig XMLDSigConfig
+	xadesConfig   *XAdESConfig
+	timeNow       func() time.Time
 }
 
 // WithCertificate expects a path to a file containing a PKCS12 (.p12 or .pfx) certificate
@@ -49,10 +49,10 @@ func WithTimestamp(url string) Option {
 	}
 }
 
-// WithXMLDSigOptions allows passing custom options overriding default XMLDSig settings.
-func WithXMLDSigOptions(opts XMLDSigOptions) Option {
+// WithXMLDSigConfig allows passing custom options overriding default XMLDSig settings.
+func WithXMLDSigConfig(opts XMLDSigConfig) Option {
 	return func(o *options) error {
-		o.xmlOptions = opts
+		o.xmldsigConfig = opts
 		return nil
 	}
 }
@@ -61,7 +61,7 @@ func WithXMLDSigOptions(opts XMLDSigOptions) Option {
 // Note that unlike other options, this one accepts a pointer to XAdESConfig - this is for backward compatibility.
 func WithXAdES(opts *XAdESConfig) Option {
 	return func(o *options) error {
-		o.xadesOptions = normalizeXAdESOptions(opts)
+		o.xadesConfig = normalizeXAdESConfig(opts)
 		return nil
 	}
 }

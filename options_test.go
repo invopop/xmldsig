@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func TestNormalizeXMLDSigOptionsDefaults(t *testing.T) {
-	opts := normalizeXMLDSigOptions(XMLDSigOptions{})
+func TestNormalizeXMLDSigConfigDefaults(t *testing.T) {
+	opts := normalizeXMLDSigConfig(XMLDSigConfig{})
 	if opts.DataCanonicalizer == nil {
 		t.Fatal("expected DataCanonicalizer to be set")
 	}
@@ -28,14 +28,14 @@ func TestNormalizeXMLDSigOptionsDefaults(t *testing.T) {
 	}
 }
 
-func TestNormalizeXMLDSigOptionsPreservesValues(t *testing.T) {
-	custom := XMLDSigOptions{
+func TestNormalizeXMLDSigConfigPreservesValues(t *testing.T) {
+	custom := XMLDSigConfig{
 		DataHash:                     crypto.SHA384,
 		SignedInfoHash:               crypto.SHA224,
 		IncludeKeyValue:              true,
 		ReferenceKeyInfoInSignedInfo: true,
 	}
-	opts := normalizeXMLDSigOptions(custom)
+	opts := normalizeXMLDSigConfig(custom)
 
 	if opts.DataHash != crypto.SHA384 {
 		t.Fatalf("expected DataHash to remain SHA384, got %v", opts.DataHash)
@@ -51,10 +51,10 @@ func TestNormalizeXMLDSigOptionsPreservesValues(t *testing.T) {
 	}
 }
 
-func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
-	opts := normalizeXAdESOptions(nil)
+func TestNormalizeXAdESConfigDefaults(t *testing.T) {
+	opts := normalizeXAdESConfig(nil)
 	if opts == nil {
-		t.Fatal("expected normalizeXAdESOptions to return non-nil options")
+		t.Fatal("expected normalizeXAdESConfig to return non-nil options")
 	}
 	if opts.TimestampFormatter == nil {
 		t.Fatal("expected TimestampFormatter to be set")
@@ -76,12 +76,12 @@ func TestNormalizeXAdESOptionsDefaults(t *testing.T) {
 	}
 }
 
-func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
+func TestNormalizeXAdESConfigValues(t *testing.T) {
 	custom := &XAdESConfig{
 		SigningCertificateHash: crypto.SHA1,
 		SignedPropertiesHash:   crypto.SHA224,
 	}
-	opts := normalizeXAdESOptions(custom)
+	opts := normalizeXAdESConfig(custom)
 
 	if opts.SigningCertificateHash != crypto.SHA1 {
 		t.Fatalf("expected SigningCertificateHash to remain SHA1, got %v", opts.SigningCertificateHash)
@@ -91,31 +91,31 @@ func TestNormalizeXAdESOptionsPreservesValues(t *testing.T) {
 	}
 }
 
-func TestWithXMLDSigOptions(t *testing.T) {
-	raw := XMLDSigOptions{IncludeKeyValue: true}
-	opt := WithXMLDSigOptions(raw)
+func TestWithXMLDSigConfig(t *testing.T) {
+	raw := XMLDSigConfig{IncludeKeyValue: true}
+	opt := WithXMLDSigConfig(raw)
 	o := &options{}
 	if err := opt(o); err != nil {
-		t.Fatalf("WithXMLDSigOptions returned error: %v", err)
+		t.Fatalf("WithXMLDSigConfig returned error: %v", err)
 	}
-	if !o.xmlOptions.IncludeKeyValue {
+	if !o.xmldsigConfig.IncludeKeyValue {
 		t.Fatal("expected IncludeKeyValue to be true")
 	}
 }
 
-func TestWithXAdESOptions(t *testing.T) {
+func TestWithXAdES(t *testing.T) {
 	raw := &XAdESConfig{
 		Role: XAdESSignerRole("issuer"),
 	}
 	opt := WithXAdES(raw)
 	o := &options{}
 	if err := opt(o); err != nil {
-		t.Fatalf("WithXAdESOptions returned error: %v", err)
+		t.Fatalf("WithXAdES returned error: %v", err)
 	}
-	if o.xadesOptions == nil {
-		t.Fatal("expected xadesOptions to be set")
+	if o.xadesConfig == nil {
+		t.Fatal("expected xadesConfig to be set")
 	}
-	if o.xadesOptions.Role != "issuer" {
-		t.Fatalf("expected Role to be cloned, got %+v", o.xadesOptions.Role)
+	if o.xadesConfig.Role != "issuer" {
+		t.Fatalf("expected Role to be cloned, got %+v", o.xadesConfig.Role)
 	}
 }

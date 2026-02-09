@@ -136,14 +136,14 @@ type PolicySigPolicyHash struct {
 }
 
 func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
-	if s.opts.xadesOptions == nil {
+	if s.opts.xadesConfig == nil {
 		return nil, errors.New("missing xades options")
 	}
 	cert := s.opts.cert
 	if cert == nil {
 		return nil, errors.New("missing certificate")
 	}
-	certHash := s.opts.xadesOptions.SigningCertificateHash
+	certHash := s.opts.xadesConfig.SigningCertificateHash
 	fingerprint, err := cert.Fingerprint(certHash)
 	if err != nil {
 		return nil, fmt.Errorf("certificate fingerprint: %w", err)
@@ -167,17 +167,17 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 	}
 
 	signedSignatureProps := &SignedSignatureProperties{
-		SigningTime:               s.opts.xadesOptions.TimestampFormatter(s.opts.timeNow()),
+		SigningTime:               s.opts.xadesConfig.TimestampFormatter(s.opts.timeNow()),
 		SigningCertificate:        signingCertificate,
-		SignerRole:                buildSignerRole(s.opts.xadesOptions.Role),
-		SignaturePolicyIdentifier: buildPolicyIdentifier(s.opts.xadesOptions.Policy),
+		SignerRole:                buildSignerRole(s.opts.xadesConfig.Role),
+		SignaturePolicyIdentifier: buildPolicyIdentifier(s.opts.xadesConfig.Policy),
 	}
 
 	signedProps := &SignedProperties{
 		ID:                        fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
 		SignedSignatureProperties: signedSignatureProps,
 		SignedDataObjectProperties: buildSignedDataObjectProperties(
-			s.opts.xadesOptions.DataObjectFormat,
+			s.opts.xadesConfig.DataObjectFormat,
 			fmt.Sprintf(signedDataReferenceID, s.opts.docID),
 		),
 	}
@@ -186,8 +186,8 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 }
 
 func (s *Signature) serializeIssuer(cert *Certificate) string {
-	if s.opts.xadesOptions != nil {
-		if serializer := s.opts.xadesOptions.IssuerSerializer; serializer != nil && cert.issuer != nil {
+	if s.opts.xadesConfig != nil {
+		if serializer := s.opts.xadesConfig.IssuerSerializer; serializer != nil && cert.issuer != nil {
 			return serializer(*cert.issuer)
 		}
 	}

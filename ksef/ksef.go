@@ -9,8 +9,8 @@ import (
 	"github.com/invopop/xmldsig"
 )
 
-// XAdESOptions returns the KSeF-specific XAdES configuration.
-func XAdESOptions() xmldsig.XAdESConfig {
+// XAdESConfig returns the KSeF-specific XAdES configuration.
+func XAdESConfig() xmldsig.XAdESConfig {
 	// List of allowed canonicalizers: https://github.com/CIRFMF/ksef-docs/blob/main/auth/podpis-xades.md
 	return xmldsig.XAdESConfig{
 		TimestampFormatter: ksefTimestampFormatter,

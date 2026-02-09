@@ -8,16 +8,16 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// XMLDSigOptions returns the XMLDSig defaults required by the FacturaE profile.
-func XMLDSigOptions() xmldsig.XMLDSigOptions {
-	return xmldsig.XMLDSigOptions{
+// XMLDSigConfig returns the XMLDSig defaults required by the FacturaE profile.
+func XMLDSigConfig() xmldsig.XMLDSigConfig {
+	return xmldsig.XMLDSigConfig{
 		IncludeKeyValue:              true,
 		ReferenceKeyInfoInSignedInfo: true,
 	}
 }
 
-// XAdESOptions builds the FacturaE-specific XAdES configuration from the provided config.
-func XAdESOptions(opts xmldsig.XAdESConfig) xmldsig.XAdESConfig {
+// XAdESConfig builds the FacturaE-specific XAdES configuration from the provided config.
+func XAdESConfig(opts xmldsig.XAdESConfig) xmldsig.XAdESConfig {
 	opts.TimestampFormatter = facturaeTimestampFormatter
 	opts.IssuerSerializer = facturaeIssuerSerializer
 	opts.SignedPropertiesCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
