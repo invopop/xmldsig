@@ -18,7 +18,7 @@ The library supports multiple configuration options. It's possible to specify op
 - whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
 - whether to include the public key value (RSA or ECDSA) in KeyInfo (some APIs require it, some don't)
 
-These options are passed to the library by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESOptions`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdES` respectively. Settings in these structs will override default settings.
+These options are passed to the library by creating structs of type `xmldsig.XMLDSigOptions` and `xmldsig.XAdESConfig`, and passing them to `xmldsig.WithXMLDSigOptions` and `xmldsig.WithXAdES` respectively. Settings in these structs will override default settings.
 
 For convenience, there are **predefined option builders**:
 

@@ -4,16 +4,16 @@
 
 These options allow configuring specific behavior at the XMLDSig level. To provide custom values, use `WithXMLDSigOptions` function with a struct overriding the defaults. Not using the function at all, or providing an empty struct, will result in default values being used.
 
-| Field                          | Type                 | Description                                                                             | Default          |
-| ------------------------------ | -------------------- | --------------------------------------------------------------------------------------- | ---------------- |
-| `DataCanonicalizer`            | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed                                              | Inclusive C14N10 |
-| `DataHash`                     | `crypto.Hash`        | Hash algorithm used on the XML being signed                                             | SHA512           |
-| `IncludeKeyValue`              | `bool`               | Whether to include the public key value (RSA or ECDSA) in `KeyInfo`                     | false            |
-| `ReferenceKeyInfoInSignedInfo` | `bool`               | Whether to include hash of `KeyInfo` element in `SignedInfo` > `Reference`              | false            |
-| `KeyInfoHash`                  | `crypto.Hash`        | Hash algorithm used on `KeyInfo`; useful only when `IncludeKeyInfoInSignedInfo` is true | SHA512           |
-| `KeyInfoCanonicalizer`         | `dsig.Canonicalizer` | Canonicalizer used on `KeyInfo`; useful only when `IncludeKeyInfoInSignedInfo` is true  | Inclusive C14N10 |
-| `SignedInfoCanonicalizer`      | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo`                                                      | Inclusive C14N10 |
-| `SignedInfoHash`               | `crypto.Hash`        | Hash algorithm used on `SignedInfo`                                                     | SHA256           |
+| Field                          | Type                 | Description                                                                               | Default          |
+| ------------------------------ | -------------------- | ----------------------------------------------------------------------------------------- | ---------------- |
+| `DataCanonicalizer`            | `dsig.Canonicalizer` | Canonicalizer used on the XML being signed                                                | Inclusive C14N10 |
+| `DataHash`                     | `crypto.Hash`        | Hash algorithm used on the XML being signed                                               | SHA512           |
+| `IncludeKeyValue`              | `bool`               | Whether to include the public key value (RSA or ECDSA) in `KeyInfo`                       | false            |
+| `ReferenceKeyInfoInSignedInfo` | `bool`               | Whether to include hash of `KeyInfo` element in `SignedInfo` > `Reference`                | false            |
+| `KeyInfoHash`                  | `crypto.Hash`        | Hash algorithm used on `KeyInfo`; useful only when `ReferenceKeyInfoInSignedInfo` is true | SHA512           |
+| `KeyInfoCanonicalizer`         | `dsig.Canonicalizer` | Canonicalizer used on `KeyInfo`; useful only when `ReferenceKeyInfoInSignedInfo` is true  | Inclusive C14N10 |
+| `SignedInfoCanonicalizer`      | `dsig.Canonicalizer` | Canonicalizer used on `SignedInfo`                                                        | Inclusive C14N10 |
+| `SignedInfoHash`               | `crypto.Hash`        | Hash algorithm used on `SignedInfo`                                                       | SHA256           |
 
 Defaults that need to be overridden for FacturaE:
 
