@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
 
@@ -103,11 +104,48 @@ func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
 	}
 	digest := hasher.Sum(nil)
 
-	signature, signingErr := cert.privateKey.Sign(rand.Reader, digest, hash)
+	// RSA and ECDSA certificates require different signing code
+	// (even though both implement crypto.Signer)
+	var signature []byte
+	var signingErr error
+	switch cert.privateKey.(type) {
+	case *rsa.PrivateKey:
+		signature, signingErr = cert.privateKey.Sign(rand.Reader, digest, hash)
+	case *ecdsa.PrivateKey:
+		// When using ECDSA, privateKey.Sign returns signature in DER format, but XML DSig
+		// requires the signature to be in the concatenated format (r || s)
+		signature, signingErr = signECDSA(cert.privateKey.(*ecdsa.PrivateKey), digest, hash)
+	default:
+		return "", fmt.Errorf("unsupported key type: %T", cert.privateKey)
+	}
+
 	if signingErr != nil {
 		return "", signingErr
 	}
 	return base64.StdEncoding.EncodeToString(signature), nil
+}
+
+type ecdsaSignature struct {
+	R, S *big.Int
+}
+
+func signECDSA(privateKey *ecdsa.PrivateKey, digest []byte, hash crypto.Hash) ([]byte, error) {
+	derSig, err := privateKey.Sign(rand.Reader, digest, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	var sig ecdsaSignature
+	if _, err := asn1.Unmarshal(derSig, &sig); err != nil {
+		return nil, err
+	}
+
+	keyBytes := (privateKey.Curve.Params().BitSize + 7) / 8
+	rBytes := sig.R.FillBytes(make([]byte, keyBytes))
+	sBytes := sig.S.FillBytes(make([]byte, keyBytes))
+	signature := append(rBytes, sBytes...)
+
+	return signature, nil
 }
 
 // Fingerprint returns the requested hash of the certificate bytes.
