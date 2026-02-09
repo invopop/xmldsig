@@ -2,8 +2,8 @@ package xmldsig
 
 import (
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -206,41 +206,33 @@ func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
 			Exponent:  base64.StdEncoding.EncodeToString(exponentBytes),
 		}
 	case *ecdsa.PrivateKey:
-		curveURI := namedCurveURI(privateKey.Curve)
-		if curveURI == "" {
+		curveEntry, ok := curveMap[privateKey.Curve.Params().Name]
+		if !ok {
 			return nil
 		}
-		publicKey := elliptic.Marshal(privateKey.Curve, privateKey.X, privateKey.Y)
+		// ecdsa.PrivateKey and ecdh.PrivateKey are not compatible, so we need to convert one to another
+		ecdhPrivateKey, err := curveEntry.curve.NewPrivateKey(privateKey.D.Bytes())
+		if err != nil {
+			return nil
+		}
+		ecdhPublicKey := ecdhPrivateKey.PublicKey()
 		return &PrivateKeyInfo{
 			Algorithm: KeyAlgorithmECDSA,
-			CurveURI:  curveURI,
-			PublicKey: base64.StdEncoding.EncodeToString(publicKey),
+			CurveURI:  curveEntry.uri,
+			PublicKey: base64.StdEncoding.EncodeToString(ecdhPublicKey.Bytes()),
 		}
 	}
 
 	return nil
 }
 
-func namedCurveURI(curve elliptic.Curve) string {
-	if curve == nil {
-		return ""
-	}
-	params := curve.Params()
-	if params == nil {
-		return ""
-	}
-	switch params.Name {
-	case "P-224":
-		return "urn:oid:1.3.132.0.33"
-	case "P-256":
-		return "urn:oid:1.2.840.10045.3.1.7"
-	case "P-384":
-		return "urn:oid:1.3.132.0.34"
-	case "P-521":
-		return "urn:oid:1.3.132.0.35"
-	default:
-		return ""
-	}
+var curveMap = map[string]struct {
+	uri   string
+	curve ecdh.Curve
+}{
+	"P-256": {"urn:oid:1.2.840.10045.3.1.7", ecdh.P256()},
+	"P-384": {"urn:oid:1.3.132.0.34", ecdh.P384()},
+	"P-521": {"urn:oid:1.3.132.0.35", ecdh.P521()},
 }
 
 // TLSAuthConfig prepares TLS authentication connection details ready to use
