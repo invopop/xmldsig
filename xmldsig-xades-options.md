@@ -22,7 +22,7 @@ Defaults that need to be overridden for FacturaE:
 
 ## XAdES options
 
-These options allow configuring the XAdES level. To enable XAdES, use `WithXAdES` function. A struct provided to the function will override the defaults. Providing an empty struct will result in fully using defaults.
+These options allow configuring the XAdES level. To enable XAdES, use `WithXAdES` function. A pointer to struct provided to the function will override the defaults. Providing `nil` or an empty struct will result in fully using defaults.
 
 | Field                           | Type                                  | Description                                                                              | Default                                             |
 | ------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------- |

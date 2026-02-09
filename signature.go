@@ -142,10 +142,8 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		return nil, errors.New("cannot sign without a certificate")
 	}
 
-	o.xmlOptions = *normalizeXMLDSigOptions(&o.xmlOptions)
-	if o.xadesOptions != nil {
-		o.xadesOptions = normalizeXAdESOptions(o.xadesOptions)
-	}
+	o.xmlOptions = normalizeXMLDSigOptions(o.xmlOptions)
+	// XAdES options are normalized in WithXAdES config function
 
 	// Extract root namespaces
 	if err := addRootNamespaces(o.namespaces, data); err != nil {

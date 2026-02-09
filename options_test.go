@@ -7,10 +7,7 @@ import (
 )
 
 func TestNormalizeXMLDSigOptionsDefaults(t *testing.T) {
-	opts := normalizeXMLDSigOptions(nil)
-	if opts == nil {
-		t.Fatal("expected normalizeXMLDSigOptions to return non-nil options")
-	}
+	opts := normalizeXMLDSigOptions(XMLDSigOptions{})
 	if opts.DataCanonicalizer == nil {
 		t.Fatal("expected DataCanonicalizer to be set")
 	}
@@ -32,7 +29,7 @@ func TestNormalizeXMLDSigOptionsDefaults(t *testing.T) {
 }
 
 func TestNormalizeXMLDSigOptionsPreservesValues(t *testing.T) {
-	custom := &XMLDSigOptions{
+	custom := XMLDSigOptions{
 		DataHash:                     crypto.SHA384,
 		SignedInfoHash:               crypto.SHA224,
 		IncludeKeyValue:              true,
@@ -107,7 +104,7 @@ func TestWithXMLDSigOptions(t *testing.T) {
 }
 
 func TestWithXAdESOptions(t *testing.T) {
-	raw := XAdESConfig{
+	raw := &XAdESConfig{
 		Role: XAdESSignerRole("issuer"),
 	}
 	opt := WithXAdES(raw)

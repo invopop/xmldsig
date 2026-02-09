@@ -36,10 +36,7 @@ type XAdESConfig struct {
 }
 
 // normalizeXMLDSigOptions fills missing XMLDSig values with defaults.
-func normalizeXMLDSigOptions(opts *XMLDSigOptions) *XMLDSigOptions {
-	if opts == nil {
-		opts = &XMLDSigOptions{}
-	}
+func normalizeXMLDSigOptions(opts XMLDSigOptions) XMLDSigOptions {
 
 	if opts.DataCanonicalizer == nil {
 		opts.DataCanonicalizer = dsig.MakeC14N10RecCanonicalizer()
