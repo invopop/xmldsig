@@ -127,6 +127,29 @@ func TestSignature(t *testing.T) {
 			assert.Equal(t, "third party", sp.SignedSignatureProperties.SignerRole.ClaimedRoles.ClaimedRole[0])
 		}
 	})
+
+	t.Run("should set appropriate formatted time and id in signed properties", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmlOpt,
+			xadesOpt,
+			xmldsig.WithDocID("test"),
+			xmldsig.WithCurrentTime(func() time.Time {
+				return time.Date(2024, 3, 15, 10, 11, 12, 0, time.UTC)
+			}),
+		)
+		assert.Nil(t, err)
+
+		sp := signature.Object.QualifyingProperties.SignedProperties
+		if sp == nil || sp.SignedSignatureProperties == nil {
+			t.Fatalf("SignedProperties element missing")
+		}
+
+		assert.Equal(t, "Signature-test-SignedProperties", sp.ID)
+		assert.Equal(t, "2024-03-15T10:11:12+00:00", sp.SignedSignatureProperties.SigningTime)
+	})
+
 }
 
 func xadesConfig() xmldsig.XAdESConfig {
