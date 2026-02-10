@@ -232,6 +232,7 @@ func (s *Signature) buildQualifyingProperties() error {
 	return nil
 }
 
+// buildKeyInfo creates KeyInfo element, containing the certificate and public key
 func (s *Signature) buildKeyInfo() {
 	certificate := s.opts.cert
 	info := &KeyInfo{
@@ -249,6 +250,7 @@ func (s *Signature) buildKeyInfo() {
 			if keyValue := buildKeyValue(privateKeyInfo); keyValue != nil {
 				info.KeyValue = keyValue
 				if privateKeyInfo.Algorithm == KeyAlgorithmECDSA {
+					// ECDSA is only supported in XMLDSIG 1.1, so we need to add the dsig11 namespace
 					info.DSig11Namespace = NamespaceDSig11
 				}
 			}
@@ -262,6 +264,7 @@ func (s *Signature) buildKeyInfo() {
 	s.KeyInfo = info
 }
 
+// buildKeyValue creates KeyValue element, containing the public key
 func buildKeyValue(info *PrivateKeyInfo) *KeyValue {
 	switch info.Algorithm {
 	case KeyAlgorithmRSA:
@@ -289,8 +292,8 @@ func buildKeyValue(info *PrivateKeyInfo) *KeyValue {
 	}
 }
 
-// buildSignedInfo will add namespaces to the original properties
-// as part of canonicalization, so we expect copies here.
+// buildSignedInfo creates SignedInfo element, containing the references to the signed data
+// including their digest, and the canonicalization method and hash algorithm.
 func (s *Signature) buildSignedInfo() error {
 	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xmldsigConfig.SignedInfoHash, s.opts.cert.PublicKeyAlgorithm())
 	if err != nil {
@@ -307,6 +310,9 @@ func (s *Signature) buildSignedInfo() error {
 		},
 		Reference: []*Reference{},
 	}
+
+	// Note: will add namespaces to the original properties
+	// as part of canonicalization, so we expect copies here.
 
 	// Add the document digest
 	dataCanonicalizer := s.opts.xmldsigConfig.DataCanonicalizer
@@ -412,9 +418,11 @@ func (s *Signature) buildSignedInfo() error {
 	return nil
 }
 
-// newSignatureValue takes a copy of the signedInfo so that we can
-// modify the namespaces for canonicalization.
+// buildSignatureValue creates SignatureValue element, containing the
+// signed hash of the SignedInfo element.
 func (s *Signature) buildSignatureValue() error {
+	// Take a copy of the signedInfo so that we can
+	// modify the namespaces for canonicalization.
 	data, err := xml.Marshal(s.SignedInfo)
 	if err != nil {
 		return err

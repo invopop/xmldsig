@@ -57,14 +57,19 @@ type PrivateKeyInfo struct {
 	PublicKey string
 }
 
-// LoadCertificate creates a new Certificate instance from the info
-// obtained from pkcs12 formated data stream
+// LoadCertificate creates a new Certificate instance from a PKCS12 file
+// at the given path with the given password
 func LoadCertificate(path, password string) (*Certificate, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading certificate: %w", err)
 	}
+	return LoadCertificateFromBytes(data, password)
+}
 
+// LoadCertificateFromBytes creates a new Certificate instance from a PKCS12
+// certificate given as bytes, with the given password
+func LoadCertificateFromBytes(data []byte, password string) (*Certificate, error) {
 	privateKey, certificate, caChain, err := pkcs12.DecodeChain(data, password)
 	if err != nil {
 		return nil, err
@@ -129,6 +134,8 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
+// signECDSA creates a signature for the provided digest using the private key,
+// and returns it in the concatenated format (r || s) required by XML DSig
 func signECDSA(privateKey *ecdsa.PrivateKey, digest []byte, hash crypto.Hash) ([]byte, error) {
 	derSig, err := privateKey.Sign(rand.Reader, digest, hash)
 	if err != nil {
