@@ -247,6 +247,14 @@ func (cert *Certificate) SerialNumber() string {
 	return cert.certificate.SerialNumber.String()
 }
 
+// SubjectSerialNumber returns the serialNumber attribute from the
+// certificate's Subject Distinguished Name (OID 2.5.4.5). This is
+// typically used to carry national identifiers such as "TINPL-…",
+// "PNOPL-…", "PESEL-…", or "NIP-…" in Polish qualified certificates.
+func (cert *Certificate) SubjectSerialNumber() string {
+	return cert.certificate.Subject.SerialNumber
+}
+
 // PublicKeyAlgorithm exposes the public key algorithm of the certificate.
 func (cert *Certificate) PublicKeyAlgorithm() x509.PublicKeyAlgorithm {
 	return cert.certificate.PublicKeyAlgorithm

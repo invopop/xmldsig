@@ -6,7 +6,7 @@ Partial implementation of the XML DSig and XAdES standards for Go. Accepts certi
 [![Test Go](https://github.com/invopop/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/test.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/invopop/xmldsig)](https://goreportcard.com/report/github.com/invopop/xmldsig)
 [![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
-![Latest Tag](https://img.shields.io/github/v/tag/MieszkoGulinski/xmldsig)
+![Latest Tag](https://img.shields.io/github/v/tag/invopop/xmldsig)
 
 ## Available settings
 
