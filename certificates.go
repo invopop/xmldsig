@@ -127,6 +127,7 @@ func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
 	if signingErr != nil {
 		return "", signingErr
 	}
+
 	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
@@ -181,13 +182,16 @@ func (cert *Certificate) PEM() []byte {
 	return PEMCertificate(cert.certificate)
 }
 
-// PrivateKey provides the private key in PEM format, if it's a RSA key.
+// PrivateKey provides the private key in PEM format for both RSA and ECDSA keys.
 func (cert *Certificate) PrivateKey() []byte {
-	privateKey, ok := cert.privateKey.(*rsa.PrivateKey)
-	if !ok {
+	switch key := cert.privateKey.(type) {
+	case *rsa.PrivateKey:
+		return PEMPrivateRSAKey(key)
+	case *ecdsa.PrivateKey:
+		return PEMPrivateECDSAKey(key)
+	default:
 		return nil
 	}
-	return PEMPrivateRSAKey(privateKey)
 }
 
 // NakedPEM converts a x509 formated certificate to the PEM format without
@@ -216,6 +220,19 @@ func PEMPrivateRSAKey(key *rsa.PrivateKey) []byte {
 	pb := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	}
+	return pem.EncodeToMemory(pb)
+}
+
+// PEMPrivateECDSAKey issues a PEM string with the ECDSA Key.
+func PEMPrivateECDSAKey(key *ecdsa.PrivateKey) []byte {
+	keyBytes, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil
+	}
+	pb := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyBytes,
 	}
 	return pem.EncodeToMemory(pb)
 }
@@ -284,10 +301,14 @@ var curveMap = map[string]struct {
 // with HTTP servers that require them in addition to the signatures of the
 // XML-DSig signed payload.
 func (cert *Certificate) TLSAuthConfig() (*tls.Config, error) {
-	pair, err := tls.X509KeyPair(cert.PEM(), cert.PrivateKey())
-	if err != nil {
-		return nil, err
+	// Build tls.Certificate directly using the crypto.Signer interface
+	// This works for both RSA and ECDSA keys
+	pair := tls.Certificate{
+		Certificate: [][]byte{cert.certificate.Raw},
+		PrivateKey:  cert.privateKey,
+		Leaf:        cert.certificate,
 	}
+
 	rootCAs := x509.NewCertPool()
 	for _, c := range cert.CaChain {
 		rootCAs.AddCert(c)
