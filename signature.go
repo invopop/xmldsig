@@ -8,33 +8,22 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/invopop/gobl/uuid"
+	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// Namespaces
+// Namespaces used in XML-DSig and XAdES.
 const (
-	NamespaceXAdES = "http://uri.etsi.org/01903/v1.3.2#"
-	NamespaceDSig  = "http://www.w3.org/2000/09/xmldsig#"
+	NamespaceXAdES  = "http://uri.etsi.org/01903/v1.3.2#"
+	NamespaceDSig   = "http://www.w3.org/2000/09/xmldsig#"
+	NamespaceDSig11 = "http://www.w3.org/2009/xmldsig11#"
 )
 
-// Namespace names (short)
+// XML namespace prefixes.
 const (
 	XMLNS = "xmlns"
 	XAdES = "xades"
 	DSig  = "ds"
 )
-
-// Algorithms
-const (
-	AlgEncSHA256     = "http://www.w3.org/2001/04/xmlenc#sha256"
-	AlgEncSHA512     = "http://www.w3.org/2001/04/xmlenc#sha512"
-	AlgDSigSHA1      = "http://www.w3.org/2000/09/xmldsig#sha1"
-	AlgDSigRSASHA1   = "http://www.w3.org/2000/09/xmldsig#rsa-sha1"
-	AlgDSigRSASHA256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
-)
-
-// ISO8601 contains the time format used for signing times
-// (based on https://en.wikipedia.org/wiki/ISO_8601)
-const ISO8601 = "2006-01-02T15:04:05-07:00"
 
 // Signature contains the complete signature to be added
 // to the document.
@@ -48,9 +37,13 @@ type Signature struct {
 	KeyInfo    *KeyInfo    `xml:"ds:KeyInfo"`
 	Object     *Object     `xml:"ds:Object,omitempty"`
 
-	doc         []byte   `xml:"-"`
-	opts        *options `xml:"-"`
-	referenceID string   `xml:"-"` // reference ID to main content
+	doc  []byte   `xml:"-"`
+	opts *options `xml:"-"`
+}
+
+// AlgorithmMethod contains URL identifier of the signing algorithm (e.g. RSA-SHA256)
+type AlgorithmMethod struct {
+	Algorithm string `xml:"Algorithm,attr"`
 }
 
 // SignedInfo contains the info that will be signed by
@@ -64,7 +57,9 @@ type SignedInfo struct {
 	Reference              []*Reference     `xml:"ds:Reference"`
 }
 
-// Reference contains ...
+// Reference contains information about the document part that is signed
+// Note that there may be multiple references in a signature - in XAdES, one reference is for the outermost XML element,
+// and another reference is for XAdES-specific data (xades:SignedProperties)
 type Reference struct {
 	ID   string `xml:"Id,attr,omitempty"`
 	Type string `xml:"Type,attr,omitempty"`
@@ -75,135 +70,58 @@ type Reference struct {
 	DigestValue  string           `xml:"ds:DigestValue"`
 }
 
-// Transforms contains ...
+// Transforms contains a list of transforms to apply to the document before signing, as URL identifiers - usually includes canonicalization and hash algorithms.
 type Transforms struct {
 	Transform []*AlgorithmMethod `xml:"ds:Transform"`
 }
 
-// Value contains ...
+// Value contains the signature itself (base64-encoded)
 type Value struct {
 	ID    string `xml:"Id,attr"`
 	Value string `xml:",chardata"`
 }
 
-// KeyInfo contains ...
+// KeyInfo contains the public key and certificate information
 type KeyInfo struct {
 	XMLName xml.Name `xml:"ds:KeyInfo"`
 	ID      string   `xml:"Id,attr"`
 
+	DSig11Namespace string `xml:"xmlns:dsig11,attr,omitempty"`
+
 	X509Data *X509Data `xml:"ds:X509Data,omitempty"`
-	KeyValue *KeyValue `xml:"ds:KeyValue,omitempty"`
+	KeyValue *KeyValue `xml:"ds:KeyValue,omitempty"` // optional, some APIs require it
 }
 
-// X509Data contains ...
+// X509Data contains the certificate chain
 type X509Data struct {
 	X509Certificate []string `xml:"ds:X509Certificate"`
 }
 
-// KeyValue contains ...
+// KeyValue contains the public key (optional, only specific APIs require it)
 type KeyValue struct {
-	Modulus  string `xml:"ds:RSAKeyValue>ds:Modulus"`
-	Exponent string `xml:"ds:RSAKeyValue>ds:Exponent"`
+	// RSA (XMLDSIG 1.0)
+	RSA *RSAKeyValue `xml:"ds:RSAKeyValue,omitempty"`
+
+	// EC (XMLDSIG 1.1)
+	EC *ECKeyValue `xml:"dsig11:ECKeyValue,omitempty"`
 }
 
-// Object contains ...
-type Object struct {
-	QualifyingProperties *QualifyingProperties `xml:"xades:QualifyingProperties"`
+type RSAKeyValue struct {
+	XMLName xml.Name `xml:"ds:RSAKeyValue"`
+
+	Modulus  string `xml:"ds:Modulus,omitempty"`
+	Exponent string `xml:"ds:Exponent,omitempty"`
 }
 
-// QualifyingProperties the funny XaDES signature confirmation policy data. This is the only place the
-// `xades` namespace is required, so we can add it just here.
-type QualifyingProperties struct {
-	XAdESNamespace string `xml:"xmlns:xades,attr,omitempty"`
-	ID             string `xml:"Id,attr"`
-	Target         string `xml:"Target,attr"`
+type ECKeyValue struct {
+	XMLName xml.Name `xml:"dsig11:ECKeyValue"`
 
-	SignedProperties   *SignedProperties   `xml:"xades:SignedProperties"`
-	UnsignedProperties *UnsignedProperties `xml:"xades:UnsignedProperties,omitempty"`
+	NamedCurve NamedCurve `xml:"dsig11:NamedCurve"`
+	PublicKey  string     `xml:"dsig11:PublicKey"`
 }
 
-// SignedProperties contains ...
-type SignedProperties struct {
-	XMLName xml.Name `xml:"xades:SignedProperties"`
-	ID      string   `xml:"Id,attr"`
-
-	SignatureProperties  *SignedSignatureProperties `xml:"xades:SignedSignatureProperties"`
-	DataObjectProperties *DataObjectFormat          `xml:"xades:SignedDataObjectProperties>xades:DataObjectFormat"`
-}
-
-// SignedSignatureProperties contains ...
-type SignedSignatureProperties struct {
-	SigningTime        string              `xml:"xades:SigningTime"`
-	SigningCertificate *SigningCertificate `xml:"xades:SigningCertificate"`
-	PolicyIdentifier   *PolicyIdentifier   `xml:"xades:SignaturePolicyIdentifier"`
-	SignerRole         *SignerRole         `xml:"xades:SignerRole"`
-}
-
-// SigningCertificate contains ...
-type SigningCertificate struct {
-	CertDigest   *Digest       `xml:"xades:Cert>xades:CertDigest"`
-	IssuerSerial *IssuerSerial `xml:"xades:Cert>xades:IssuerSerial"`
-}
-
-// Digest contains ...
-type Digest struct {
-	Method *AlgorithmMethod `xml:"ds:DigestMethod"`
-	Value  string           `xml:"ds:DigestValue"`
-}
-
-// AlgorithmMethod contains ...
-type AlgorithmMethod struct {
-	Algorithm string `xml:"Algorithm,attr"`
-}
-
-// IssuerSerial contains ...
-type IssuerSerial struct {
-	IssuerName   string `xml:"ds:X509IssuerName"`
-	SerialNumber string `xml:"ds:X509SerialNumber"`
-}
-
-// PolicyIdentifier contains ...
-type PolicyIdentifier struct {
-	SigPolicyID   *SigPolicyID `xml:"xades:SignaturePolicyId>xades:SigPolicyId"`
-	SigPolicyHash *Digest      `xml:"xades:SignaturePolicyId>xades:SigPolicyHash"`
-}
-
-// SigPolicyID contains ...
-type SigPolicyID struct {
-	Identifier  string `xml:"xades:Identifier"`
-	Description string `xml:"xades:Description"`
-}
-
-// SignerRole contains ...
-type SignerRole struct {
-	ClaimedRoles *Roles `xml:"xades:ClaimedRoles"`
-}
-
-// Roles contains ...
-type Roles struct {
-	ClaimedRole []string `xml:"xades:ClaimedRole"`
-}
-
-// DataObjectFormat contains ...
-type DataObjectFormat struct {
-	ObjectReference string `xml:"ObjectReference,attr"`
-
-	Description      string            `xml:"xades:Description"`
-	ObjectIdentifier *ObjectIdentifier `xml:"xades:ObjectIdentifier"`
-	MimeType         string            `xml:"xades:MimeType"`
-	Encoding         string            `xml:"xades:Encoding"` // normally empty
-}
-
-// ObjectIdentifier holds and identifier
-type ObjectIdentifier struct {
-	Identifier  *Identifier `xml:"xades:Identifier"`
-	Description string      `xml:"xades:Description"`
-}
-
-// Identifier contains ...
-type Identifier struct {
-	Qualifier string `xml:"Qualifier,attr"`
-	Value     string `xml:",chardata"`
+type NamedCurve struct {
+	URI string `xml:"URI,attr"`
 }
 
 const (
@@ -211,7 +129,7 @@ const (
 	signatureRootIDFormat           = "Signature-%s-Signature"
 	sigPropertiesIDFormat           = "Signature-%s-SignedProperties"
 	sigQualifyingPropertiesIDFormat = "Signature-%s-QualifyingProperties"
-	referenceIDFormat               = "Reference-%s"
+	signedDataReferenceID           = "Reference-%s"
 	certificateIDFormat             = "Certificate-%s"
 )
 
@@ -229,6 +147,10 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	if o.cert == nil {
 		return nil, errors.New("cannot sign without a certificate")
 	}
+
+	o.xmldsigConfig = normalizeXMLDSigConfig(o.xmldsigConfig)
+	// XAdES options are normalized in WithXAdES config function
+
 	// Extract root namespaces
 	if err := addRootNamespaces(o.namespaces, data); err != nil {
 		return nil, fmt.Errorf("add root namespaces: %w", err)
@@ -237,13 +159,14 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	s := &Signature{
 		doc:           data,
 		opts:          o,
-		referenceID:   fmt.Sprintf(referenceIDFormat, o.docID),
 		ID:            fmt.Sprintf(signatureRootIDFormat, o.docID),
 		DSigNamespace: NamespaceDSig,
 	}
 
-	if o.xades != nil {
-		s.buildQualifyingProperties()
+	if o.xadesConfig != nil {
+		if err := s.buildQualifyingProperties(); err != nil {
+			return nil, fmt.Errorf("qualifying properties: %w", err)
+		}
 	}
 
 	s.buildKeyInfo()
@@ -257,6 +180,9 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	}
 
 	if o.timestampURL != "" {
+		if o.xadesConfig == nil || s.Object == nil || s.Object.QualifyingProperties == nil {
+			return nil, errors.New("timestamp requires qualifying properties")
+		}
 		timestamp, timestampErr := buildTimestampValue(s.Value, o.timestampURL)
 		if timestampErr != nil {
 			return nil, timestampErr
@@ -269,6 +195,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	return s, nil
 }
 
+// addRootNamespaces extracts namespaces from the root element - needed for inclusive canonicalization
 func addRootNamespaces(ns Namespaces, data []byte) error {
 	d := etree.NewDocument()
 	if err := d.ReadFromBytes(data); err != nil {
@@ -278,82 +205,34 @@ func addRootNamespaces(ns Namespaces, data []byte) error {
 	for _, a := range d.Root().Attr {
 		if a.Space == XMLNS {
 			ns[a.Key] = a.Value
+		} else if a.Space == "" && a.Key == XMLNS {
+			ns[""] = a.Value
 		}
 	}
 	return nil
 }
 
-// buildQualifyingProperties is used for the XAdES policy configuration.
-func (s *Signature) buildQualifyingProperties() {
-	cert := s.opts.cert
-	qp := &QualifyingProperties{
-		XAdESNamespace: NamespaceXAdES,
-		ID:             fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
-		Target:         fmt.Sprintf("#"+signatureRootIDFormat, s.opts.docID),
-		SignedProperties: &SignedProperties{
-			ID: fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
-			SignatureProperties: &SignedSignatureProperties{
-				SigningTime: s.opts.timeNow().Format(ISO8601),
-				SigningCertificate: &SigningCertificate{
-					CertDigest: &Digest{
-						Method: &AlgorithmMethod{
-							Algorithm: AlgEncSHA512,
-						},
-						Value: cert.Fingerprint(),
-					},
-					IssuerSerial: &IssuerSerial{
-						IssuerName:   cert.Issuer(),
-						SerialNumber: cert.SerialNumber(),
-					},
-				},
-				PolicyIdentifier: s.xadesPolicyIdentifier(),
-			},
-			DataObjectProperties: &DataObjectFormat{
-				ObjectReference: "#" + s.referenceID,
-				Description:     s.opts.xades.Description,
-				ObjectIdentifier: &ObjectIdentifier{
-					Identifier: &Identifier{
-						Qualifier: "OIDAsURN",
-						Value:     "urn:oid:1.2.840.10003.5.109.10",
-					},
-					// Description: "",
-				},
-				MimeType: "text/xml",
-			},
-		},
+// buildQualifyingProperties attaches XAdES policy configuration to the signature object.
+// If not using XAdES, but raw XMLDSIG, this function should not be called.
+func (s *Signature) buildQualifyingProperties() error {
+	signedPropsElement, err := s.buildSignedPropertiesElement()
+	if err != nil {
+		return err
 	}
-
-	if s.opts.xades.Role != "" {
-		qp.SignedProperties.SignatureProperties.SignerRole = &SignerRole{
-			ClaimedRoles: &Roles{ClaimedRole: []string{s.opts.xades.Role.String()}},
-		}
+	qp := &QualifyingProperties{
+		XAdESNamespace:   NamespaceXAdES,
+		ID:               fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
+		Target:           fmt.Sprintf("#"+signatureRootIDFormat, s.opts.docID),
+		SignedProperties: signedPropsElement,
 	}
 
 	s.Object = &Object{
 		QualifyingProperties: qp,
 	}
+	return nil
 }
 
-func (s *Signature) xadesPolicyIdentifier() *PolicyIdentifier {
-	policy := s.opts.xades.Policy
-	if policy == nil {
-		return nil
-	}
-
-	return &PolicyIdentifier{
-		SigPolicyID: &SigPolicyID{
-			Identifier:  policy.URL,
-			Description: policy.Description,
-		},
-		SigPolicyHash: &Digest{
-			Method: &AlgorithmMethod{
-				Algorithm: policy.Algorithm,
-			},
-			Value: policy.Hash,
-		},
-	}
-}
-
+// buildKeyInfo creates KeyInfo element, containing the certificate and public key
 func (s *Signature) buildKeyInfo() {
 	certificate := s.opts.cert
 	info := &KeyInfo{
@@ -363,10 +242,19 @@ func (s *Signature) buildKeyInfo() {
 				certificate.NakedPEM(),
 			},
 		},
-		KeyValue: &KeyValue{
-			Modulus:  certificate.PrivateKeyInfo().Modulus,
-			Exponent: certificate.PrivateKeyInfo().Exponent,
-		},
+	}
+
+	if s.opts.xmldsigConfig.IncludeKeyValue {
+		privateKeyInfo := certificate.PrivateKeyInfo()
+		if privateKeyInfo != nil {
+			if keyValue := buildKeyValue(privateKeyInfo); keyValue != nil {
+				info.KeyValue = keyValue
+				if privateKeyInfo.Algorithm == KeyAlgorithmECDSA {
+					// ECDSA is only supported in XMLDSIG 1.1, so we need to add the dsig11 namespace
+					info.DSig11Namespace = NamespaceDSig11
+				}
+			}
+		}
 	}
 
 	for _, ca := range certificate.CaChain {
@@ -376,67 +264,151 @@ func (s *Signature) buildKeyInfo() {
 	s.KeyInfo = info
 }
 
-// buildSignedInfo will add namespaces to the original properties
-// as part of canonicalization, so we expect copies here.
+// buildKeyValue creates KeyValue element, containing the public key
+func buildKeyValue(info *PrivateKeyInfo) *KeyValue {
+	switch info.Algorithm {
+	case KeyAlgorithmRSA:
+		if info.Modulus == "" || info.Exponent == "" {
+			return nil
+		}
+		return &KeyValue{
+			RSA: &RSAKeyValue{
+				Modulus:  info.Modulus,
+				Exponent: info.Exponent,
+			},
+		}
+	case KeyAlgorithmECDSA:
+		if info.CurveURI == "" || info.PublicKey == "" {
+			return nil
+		}
+		return &KeyValue{
+			EC: &ECKeyValue{
+				NamedCurve: NamedCurve{URI: info.CurveURI},
+				PublicKey:  info.PublicKey,
+			},
+		}
+	default:
+		return nil
+	}
+}
+
+// buildSignedInfo creates SignedInfo element, containing the references to the signed data
+// including their digest, and the canonicalization method and hash algorithm.
 func (s *Signature) buildSignedInfo() error {
+	signatureMethodAlgorithm, err := signatureMethodURI(s.opts.xmldsigConfig.SignedInfoHash, s.opts.cert.PublicKeyAlgorithm())
+	if err != nil {
+		return fmt.Errorf("signature method: %w", err)
+	}
+	signedInfoCanonicalizer := s.opts.xmldsigConfig.SignedInfoCanonicalizer
+
 	si := &SignedInfo{
 		CanonicalizationMethod: &AlgorithmMethod{
-			Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
+			Algorithm: signedInfoCanonicalizer.Algorithm().String(),
 		},
 		SignatureMethod: &AlgorithmMethod{
-			Algorithm: AlgDSigRSASHA256,
-			//Algorithm: AlgDSigRSASHA1,
+			Algorithm: signatureMethodAlgorithm,
 		},
 		Reference: []*Reference{},
 	}
 
+	// Note: will add namespaces to the original properties
+	// as part of canonicalization, so we expect copies here.
+
 	// Add the document digest
-	docDigest, err := digestBytes(s.doc, s.opts.namespaces)
+	dataCanonicalizer := s.opts.xmldsigConfig.DataCanonicalizer
+	dataHash := s.opts.xmldsigConfig.DataHash
+	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
+	if err != nil {
+		return fmt.Errorf("canonicalize document: %w", err)
+	}
+	docDigest, err := digestBytes(canonicalizedDoc, dataHash)
 	if err != nil {
 		return fmt.Errorf("document digest: %w", err)
 	}
+	docDigestAlgorithm, err := hashAlgorithmURI(dataHash)
+	if err != nil {
+		return fmt.Errorf("document digest algorithm: %w", err)
+	}
+	docTransforms := []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
+	if alg := dataCanonicalizer.Algorithm().String(); alg != "" {
+		docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
+	}
 	si.Reference = append(si.Reference, &Reference{
-		ID:   s.referenceID,
+		ID:   fmt.Sprintf(signedDataReferenceID, s.opts.docID),
 		Type: "http://www.w3.org/2000/09/xmldsig#Object",
 		URI:  "",
 		Transforms: &Transforms{
-			Transform: []*AlgorithmMethod{
-				{Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature"},
-			},
+			Transform: docTransforms,
 		},
 		DigestMethod: &AlgorithmMethod{
-			Algorithm: "http://www.w3.org/2001/04/xmlenc#sha512",
+			Algorithm: docDigestAlgorithm,
 		},
 		DigestValue: docDigest,
 	})
-
-	// Add the key info
 	ns := s.opts.namespaces.Add(DSig, NamespaceDSig)
-	keyInfoDigest, err := digest(s.KeyInfo, ns)
-	if err != nil {
-		return fmt.Errorf("key info digest: %w", err)
-	}
-	si.Reference = append(si.Reference, &Reference{
-		URI: "#" + s.KeyInfo.ID,
-		DigestMethod: &AlgorithmMethod{
-			Algorithm: AlgEncSHA512,
-		},
-		DigestValue: keyInfoDigest,
-	})
 
-	// Finally, if present, add the XAdES digests
-	if s.opts.xades != nil {
+	// Add key info digest, if enabled
+	if s.opts.xmldsigConfig.ReferenceKeyInfoInSignedInfo {
+		keyInfoCanonicalizer := s.opts.xmldsigConfig.KeyInfoCanonicalizer
+		keyInfoHash := s.opts.xmldsigConfig.KeyInfoHash
+
+		keyInfoBytes, err := xml.Marshal(s.KeyInfo)
+		if err != nil {
+			return fmt.Errorf("marshal key info: %w", err)
+		}
+		canonicalizedKeyInfo, err := canonicalizeWith(keyInfoBytes, ns, keyInfoCanonicalizer)
+		if err != nil {
+			return fmt.Errorf("canonicalize key info: %w", err)
+		}
+		keyInfoDigest, err := digestBytes(canonicalizedKeyInfo, keyInfoHash)
+		if err != nil {
+			return fmt.Errorf("key info digest: %w", err)
+		}
+		keyInfoAlgorithm, err := hashAlgorithmURI(keyInfoHash)
+		if err != nil {
+			return fmt.Errorf("key info digest algorithm: %w", err)
+		}
+		si.Reference = append(si.Reference, &Reference{
+			URI: "#" + s.KeyInfo.ID,
+			DigestMethod: &AlgorithmMethod{
+				Algorithm: keyInfoAlgorithm,
+			},
+			DigestValue: keyInfoDigest,
+		})
+	}
+
+	// Finally, if enabled, add the XAdES digests
+	if s.opts.xadesConfig != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
-		spDigest, err := digest(sp, ns)
+		signedPropsCanonicalizer := s.opts.xadesConfig.SignedPropertiesCanonicalizer
+		spBytes, err := xml.Marshal(sp)
+		if err != nil {
+			return fmt.Errorf("marshal signed properties: %w", err)
+		}
+		canonicalizedSignedProps, err := canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
+		if err != nil {
+			return fmt.Errorf("canonicalize signed properties: %w", err)
+		}
+		signedPropsHash := s.opts.xadesConfig.SignedPropertiesHash
+		spDigest, err := digestBytes(canonicalizedSignedProps, signedPropsHash)
 		if err != nil {
 			return fmt.Errorf("xades digest: %w", err)
 		}
+		signedPropsAlgorithm, err := hashAlgorithmURI(signedPropsHash)
+		if err != nil {
+			return fmt.Errorf("xades digest algorithm: %w", err)
+		}
 		si.Reference = append(si.Reference, &Reference{
-			URI:  "#" + sp.ID,
+			URI: "#" + sp.ID,
+			Transforms: &Transforms{
+				Transform: []*AlgorithmMethod{
+					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},
+				},
+			},
 			Type: "http://uri.etsi.org/01903#SignedProperties",
 			DigestMethod: &AlgorithmMethod{
-				Algorithm: AlgEncSHA512,
+				Algorithm: signedPropsAlgorithm,
 			},
 			DigestValue: spDigest,
 		})
@@ -446,22 +418,24 @@ func (s *Signature) buildSignedInfo() error {
 	return nil
 }
 
-// newSignatureValue takes a copy of the signedInfo so that we can
-// modify the namespaces for canonicalization.
+// buildSignatureValue creates SignatureValue element, containing the
+// signed hash of the SignedInfo element.
 func (s *Signature) buildSignatureValue() error {
+	// Take a copy of the signedInfo so that we can
+	// modify the namespaces for canonicalization.
 	data, err := xml.Marshal(s.SignedInfo)
 	if err != nil {
 		return err
 	}
-	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
-	data, err = canonicalize(data, ns)
+	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace) // namespace of ds:Signature
+	data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]))
+	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash)
 	if err != nil {
-		return err
+		return fmt.Errorf("sign SignedInfo: %w", err)
 	}
 
 	s.Value = &Value{
@@ -471,7 +445,7 @@ func (s *Signature) buildSignatureValue() error {
 	return nil
 }
 
-// UnsignedProperties contains ...
+// UnsignedProperties contains signature data not included in the SignedInfo (e.g. verified timestamp)
 type UnsignedProperties struct {
 	SignatureTimestamp *Timestamp `xml:"xades:UnsignedSignatureProperties>xades:SignatureTimestamp"`
 }

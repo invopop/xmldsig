@@ -1,6 +1,7 @@
 package xmldsig_test
 
 import (
+	"crypto"
 	"testing"
 
 	"github.com/invopop/xmldsig"
@@ -23,12 +24,14 @@ func TestCertificateLoader(t *testing.T) {
 	})
 
 	t.Run("should sign a string", func(t *testing.T) {
-		signature, _ := certificate.Sign("some data to sign")
+		signature, err := certificate.Sign("some data to sign", crypto.SHA256)
+		require.NoError(t, err)
 		assert.Equal(t, "Gptu4mP8yyDRAL1zRDm3qabxaqwlGspdZvXNrN6jyMgPsqCBS2coOntOiNGEWHpWNoLLjSrbeq8bqEZ0DH7xEy6MOJrbp615q6XWl4mNFXHfvQmzvp2Uo4qXiXQlFKHZ7T5lxBZmD/4Bw1SRjFpMexu6hzd9cAny/bTghiXOUn81iStM2SYuJnoRL/K5hNEIjuHB8vmtaP6y/PxC+R27Ue6JAGUfhF+Yduum3sHoJUhbWNMojGiZAtNR+n9GKbqq+SSF2SGjXQPzZeJyJ9kDRmdrLMCpwuEVGYbRTImLKWgqqKaMUQr7hoFZCmG3tObgO35TYZ6wIumJE8k149d2LQ==", signature)
 	})
 
 	t.Run("should return the certificate fingerprint", func(t *testing.T) {
-		fingerprint := certificate.Fingerprint()
+		fingerprint, err := certificate.Fingerprint(crypto.SHA512)
+		require.NoError(t, err)
 		assert.Equal(t, "VmNYwDiCBBXJX/IL1AUYj7uHouM2Jcp3ZkeqmB+FKGTTwXIIZnCWmZVhCSB7uNoV6Xee7nZVkMqeCMQk3tGR0g==", fingerprint)
 	})
 
@@ -61,6 +64,7 @@ func TestCertificateData(t *testing.T) {
 	t.Run("should return the certificate private key info", func(t *testing.T) {
 		privateKeyInfo := certificate.PrivateKeyInfo()
 
+		assert.Equal(t, xmldsig.KeyAlgorithmRSA, privateKeyInfo.Algorithm)
 		assert.Equal(t, "ujAnB2L5X2Bm42S5f/axKFu1QsAcZGJAeYELZZJ04jriBu3E8V3Rus3tUxfQ+ylqBm0bNWgHfP+gekosHaYoJNQmAVBuwpd183uHksTRUtbeOAFS2xd7v29stM7ARkec+WVV+SK8G6HECIB0VIAMoB2tVs0y6XRVRcjE4I7kH1h3ZbMIzvW43B4hxruYtXcvozGwvZpxQKVrjEY8IXH5+aXHM8WLCba4I06FyhvI+2/9WUPN2YvDoml7lQM4edgepTEZifq2ZPHGpCC5NhSXj2ab5FtnGTMgUaWH6tCljT0kOdfJBOHnIWOw4dBdgkik2CuxwGyMrq/P5VqQIC2hXQ==", privateKeyInfo.Modulus)
 		assert.Equal(t, "AQAB", privateKeyInfo.Exponent)
 	})

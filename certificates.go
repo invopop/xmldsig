@@ -30,14 +30,32 @@ type Certificate struct {
 	issuer      *pkix.RDNSequence
 }
 
-// PrivateKeyInfo contains info about modulus and exponent of the key
+// KeyAlgorithm describes the public key algorithm exposed via PrivateKeyInfo.
+type KeyAlgorithm string
+
+const (
+	KeyAlgorithmUnknown KeyAlgorithm = ""
+	KeyAlgorithmRSA     KeyAlgorithm = "RSA"
+	KeyAlgorithmECDSA   KeyAlgorithm = "ECDSA"
+)
+
+// PrivateKeyInfo contains public information extracted from the private key.
+// Values are base64-encoded to match XML-DSig expectations when embedding
+// ds:KeyInfo payloads.
 type PrivateKeyInfo struct {
+	Algorithm KeyAlgorithm
+
+	// RSA fields
 	Modulus  string
 	Exponent string
+
+	// ECDSA fields
+	CurveURI  string
+	PublicKey string
 }
 
-// LoadCertificate creates a new Certificate instance from the info
-// obtained from pkcs12 formated data stream
+// LoadCertificate creates a new Certificate instance from a PKCS12 file
+// at the given path with the given password
 func LoadCertificate(path, password string) (*Certificate, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -64,31 +82,42 @@ func LoadCertificate(path, password string) (*Certificate, error) {
 	}, nil
 }
 
-// Sign will first create a hash of the data passed and then
-// create a string (base64) representation of the signature obtained
-// using the private key of the certificate
-func (cert *Certificate) Sign(data string) (string, error) {
-	hash := makeHash(data)
+// Sign hashes the provided data with the requested hash algorithm and signs the
+// digest using the configured private key.
+func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
+	if hash == 0 {
+		hash = crypto.SHA256
+	}
+	if !hash.Available() {
+		return "", fmt.Errorf("hash %v not available", hash)
+	}
 
-	signature, signingErr := rsa.SignPKCS1v15(rand.Reader, cert.privateKey, crypto.SHA256, hash)
+	hasher := hash.New()
+	if _, err := hasher.Write([]byte(data)); err != nil {
+		return "", err
+	}
+	digest := hasher.Sum(nil)
+
+	signature, signingErr := rsa.SignPKCS1v15(rand.Reader, cert.privateKey, hash, digest)
 	if signingErr != nil {
 		return "", signingErr
 	}
-
 	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
-func makeHash(data string) []byte {
-	hasher := crypto.SHA256.New()
-	hasher.Write([]byte(data))
-	return hasher.Sum(nil)
-}
-
-// Fingerprint will return the SHA512 hash of the public key
-func (cert *Certificate) Fingerprint() string {
-	hasher := crypto.SHA512.New()
-	hasher.Write(cert.certificate.Raw)
-	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
+// Fingerprint returns the requested hash of the certificate bytes.
+func (cert *Certificate) Fingerprint(hash crypto.Hash) (string, error) {
+	if hash == 0 {
+		hash = crypto.SHA512
+	}
+	if !hash.Available() {
+		return "", fmt.Errorf("hash %v not available", hash)
+	}
+	hasher := hash.New()
+	if _, err := hasher.Write(cert.certificate.Raw); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
 
 // NakedPEM will return the public certificate encoded in base64 PEM
@@ -147,7 +176,13 @@ func (cert *Certificate) SerialNumber() string {
 	return cert.certificate.SerialNumber.String()
 }
 
-// PrivateKeyInfo is the  RSA private key info
+// PublicKeyAlgorithm exposes the public key algorithm of the certificate.
+func (cert *Certificate) PublicKeyAlgorithm() x509.PublicKeyAlgorithm {
+	return cert.certificate.PublicKeyAlgorithm
+}
+
+// PrivateKeyInfo exposes public components of the configured private key that
+// may be embedded in ds:KeyInfo blocks for interoperability.
 func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
 	exponentBytes := make([]byte, 3)
 	exponentBytes[0] = byte(cert.privateKey.E >> 16)
@@ -155,8 +190,9 @@ func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
 	exponentBytes[2] = byte(cert.privateKey.E)
 
 	return &PrivateKeyInfo{
-		Modulus:  base64.StdEncoding.EncodeToString(cert.privateKey.N.Bytes()),
-		Exponent: base64.StdEncoding.EncodeToString(exponentBytes),
+		Algorithm: KeyAlgorithmRSA,
+		Modulus:   base64.StdEncoding.EncodeToString(cert.privateKey.N.Bytes()),
+		Exponent:  base64.StdEncoding.EncodeToString(exponentBytes),
 	}
 }
 

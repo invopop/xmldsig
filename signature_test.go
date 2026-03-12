@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/invopop/xmldsig"
+	"github.com/invopop/xmldsig/facturae"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,9 +32,11 @@ func TestSignature(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("should return a signature", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xadesConfig()),
+			xmlOpt,
+			xadesOpt,
 		)
 		assert.Nil(t, err)
 		assert.NotEmpty(t, signature.Value.Value)
@@ -46,18 +49,22 @@ func TestSignature(t *testing.T) {
 	})
 
 	t.Run("should not add the timestamp when parameter is false", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xadesConfig()),
+			xmlOpt,
+			xadesOpt,
 		)
 		assert.Nil(t, err)
 		assert.Nil(t, signature.Object.QualifyingProperties.UnsignedProperties)
 	})
 
 	t.Run("should add the timestamp when parameter is true", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xadesConfig()),
+			xmlOpt,
+			xadesOpt,
 			xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA),
 		)
 		require.NoError(t, err)
@@ -67,10 +74,12 @@ func TestSignature(t *testing.T) {
 	t.Run("should support setting a fixed signing time", func(t *testing.T) {
 		ts, err := time.Parse(time.RFC3339, "2022-08-05T13:51:00+02:00")
 		require.NoError(t, err)
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithDocID("test"),
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xadesConfig()),
+			xmlOpt,
+			xadesOpt,
 			xmldsig.WithCurrentTime(func() time.Time {
 				return ts
 			}),
@@ -78,35 +87,89 @@ func TestSignature(t *testing.T) {
 		assert.Nil(t, err)
 		// This is mostly useful for getting back fixed results, so
 		// we can safely compare the final signature here.
-		assert.Contains(t, signature.Value.Value, "r1GyPRqPZN3LXZ7SKpENUtI7dSXA83aIlza7fG2c1XGnHOK4HNweEDifqg65owS6TYLn7eZtiUXMHN49CUnZ7YDo9O")
+		assert.Contains(t, signature.Value.Value, "StAMqTR9wMvkBrpsG2myUAIew2cLTJbhPCCosqtsU6Srp6PVEdTyNylPgn/Kx1xcDbvA4jPfmkTSxxcvfXRkL+Q5ogCJEoLu7bbiCbjKmoyCyD54o4VONDMYK3fpQ2muw3m4fm3C8eOk+9BhmyGDbaQe5gefRLLBSA/7oGTWdooXuiHGg396dg7sGpzSEfslylBuF8yZZd1cMsvmBFUUPL14BS6x0j/H8RscissjRVUb1LZGEu0JMwVNjfAyEZDY/r4Sco2e0bLi2J5xrFDLt8aacwFwRLb4WC6MdWIf4c8Lzoi7nVB+xvMG46r8PBgPFAlfNF5Qj3+mzlY9hLQvWg==")
 	})
 
 	t.Run("should not set a signer role when not provided", func(t *testing.T) {
 		xades := xadesConfig()
 		xades.Role = ""
+		xmlOpt, xadesOpt := facturaeOptions(xades)
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xades),
+			xmlOpt,
+			xadesOpt,
 		)
 		assert.Nil(t, err)
-		assert.Nil(t, signature.Object.QualifyingProperties.SignedProperties.SignatureProperties.SignerRole)
+
+		sp := signature.Object.QualifyingProperties.SignedProperties
+		if sp == nil || sp.SignedSignatureProperties == nil {
+			t.Fatalf("SignedProperties element missing")
+		}
+		assert.Nil(t, sp.SignedSignatureProperties.SignerRole)
 	})
 
 	t.Run("should set a signer role when provided", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
-			xmldsig.WithXAdES(xadesConfig()),
+			xmlOpt,
+			xadesOpt,
 		)
 		assert.Nil(t, err)
-		assert.Equal(t,
-			"third party",
-			signature.Object.QualifyingProperties.SignedProperties.
-				SignatureProperties.SignerRole.ClaimedRoles.ClaimedRole[0])
+
+		sp := signature.Object.QualifyingProperties.SignedProperties
+		if sp == nil || sp.SignedSignatureProperties == nil {
+			t.Fatalf("SignedProperties element missing")
+		}
+		if assert.NotNil(t, sp.SignedSignatureProperties.SignerRole) &&
+			assert.NotNil(t, sp.SignedSignatureProperties.SignerRole.ClaimedRoles) {
+			require.Len(t, sp.SignedSignatureProperties.SignerRole.ClaimedRoles.ClaimedRole, 1)
+			assert.Equal(t, "third party", sp.SignedSignatureProperties.SignerRole.ClaimedRoles.ClaimedRole[0])
+		}
 	})
+
+	t.Run("should set appropriate formatted time and id in signed properties", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmlOpt,
+			xadesOpt,
+			xmldsig.WithDocID("test"),
+			xmldsig.WithCurrentTime(func() time.Time {
+				return time.Date(2024, 3, 15, 10, 11, 12, 0, time.UTC)
+			}),
+		)
+		assert.Nil(t, err)
+
+		sp := signature.Object.QualifyingProperties.SignedProperties
+		if sp == nil || sp.SignedSignatureProperties == nil {
+			t.Fatalf("SignedProperties element missing")
+		}
+
+		assert.Equal(t, "Signature-test-SignedProperties", sp.ID)
+		assert.Equal(t, "2024-03-15T10:11:12+00:00", sp.SignedSignatureProperties.SigningTime)
+	})
+
+	t.Run("should include RSA key elements after signing", func(t *testing.T) {
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig()) // includes IncludeKeyValue: true
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmlOpt,
+			xadesOpt,
+		)
+		require.NoError(t, err)
+
+		require.NotNil(t, signature.KeyInfo, "KeyInfo should be present")
+		require.NotNil(t, signature.KeyInfo.KeyValue, "KeyValue should be present")
+		require.NotNil(t, signature.KeyInfo.KeyValue.RSA, "RSAKeyValue should be present")
+		assert.NotEmpty(t, signature.KeyInfo.KeyValue.RSA.Modulus, "Modulus should not be empty")
+		assert.NotEmpty(t, signature.KeyInfo.KeyValue.RSA.Exponent, "Exponent should not be empty")
+	})
+
 }
 
-func xadesConfig() *xmldsig.XAdESConfig {
-	return &xmldsig.XAdESConfig{
+func xadesConfig() xmldsig.XAdESConfig {
+	return xmldsig.XAdESConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
@@ -116,6 +179,12 @@ func xadesConfig() *xmldsig.XAdESConfig {
 			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
 		},
 	}
+}
+
+func facturaeOptions(cfg xmldsig.XAdESConfig) (xmldsig.Option, xmldsig.Option) {
+	opts := facturae.XAdESConfig(cfg)
+	return xmldsig.WithXMLDSigConfig(facturae.XMLDSigConfig()),
+		xmldsig.WithXAdES(&opts)
 }
 
 func getCertificate() (*xmldsig.Certificate, error) {

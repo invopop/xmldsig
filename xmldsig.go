@@ -15,35 +15,13 @@ type Option func(o *options) error
 type Namespaces map[string]string
 
 type options struct {
-	docID        string
-	namespaces   Namespaces // map of namespace name to URL
-	timestampURL string
-	cert         *Certificate
-	xades        *XAdESConfig
-	timeNow      func() time.Time
-}
-
-// XAdESSignerRole defines the accepted signer roles
-type XAdESSignerRole string
-
-// XAdESConfig defines what is expected for the configuration.
-type XAdESConfig struct {
-	Role        XAdESSignerRole    `json:"role"`
-	Description string             `json:"description,omitempty"`
-	Policy      *XAdESPolicyConfig `json:"policy"`
-}
-
-// XAdESPolicyConfig defines what policy details should be used.
-type XAdESPolicyConfig struct {
-	URL         string `json:"url"`                   // URL to the policy definition
-	Description string `json:"description,omitempty"` // Optional human description
-	Algorithm   string `json:"algorithm"`             // eg. SHA1 o SHA256
-	Hash        string `json:"hash"`                  // Base64 encoded hash (usually provided with policy)
-}
-
-// String converts the XAdES role into a string
-func (r XAdESSignerRole) String() string {
-	return string(r)
+	docID         string
+	namespaces    Namespaces // map of namespace name to URL
+	timestampURL  string
+	cert          *Certificate
+	xmldsigConfig XMLDSigConfig
+	xadesConfig   *XAdESConfig
+	timeNow       func() time.Time
 }
 
 // WithCertificate expects a path to a file containing a PKCS12 (.p12 or .pfx) certificate
@@ -63,18 +41,27 @@ func WithDocID(id string) Option {
 	}
 }
 
-// WithXAdES adds the XAdES policy with the suggested role.
-func WithXAdES(config *XAdESConfig) Option {
-	return func(o *options) error {
-		o.xades = config
-		return nil
-	}
-}
-
 // WithTimestamp will add an official timestamp to the signature.
 func WithTimestamp(url string) Option {
 	return func(o *options) error {
 		o.timestampURL = url
+		return nil
+	}
+}
+
+// WithXMLDSigConfig allows passing custom options overriding default XMLDSig settings.
+func WithXMLDSigConfig(opts XMLDSigConfig) Option {
+	return func(o *options) error {
+		o.xmldsigConfig = opts
+		return nil
+	}
+}
+
+// WithXAdES enables XAdES support, and allows passing options overriding default XAdES settings.
+// Note that unlike other options, this one accepts a pointer to XAdESConfig - this is for backward compatibility.
+func WithXAdES(opts *XAdESConfig) Option {
+	return func(o *options) error {
+		o.xadesConfig = normalizeXAdESConfig(opts)
 		return nil
 	}
 }
@@ -122,11 +109,19 @@ func (ns Namespaces) Add(name, url string) Namespaces {
 func (ns Namespaces) defs() []etree.Attr {
 	attrs := make([]etree.Attr, 0)
 	for k, v := range ns {
-		attrs = append(attrs, etree.Attr{
-			Space: "xmlns",
-			Key:   k,
-			Value: v,
-		})
+		if k == "" {
+			attrs = append(attrs, etree.Attr{
+				Space: "",
+				Key:   "xmlns",
+				Value: v,
+			})
+		} else {
+			attrs = append(attrs, etree.Attr{
+				Space: "xmlns",
+				Key:   k,
+				Value: v,
+			})
+		}
 	}
 	return attrs
 }
