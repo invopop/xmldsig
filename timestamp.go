@@ -17,13 +17,13 @@ const (
 	TimestampFreeTSA = "https://freetsa.org/tsr"
 )
 
-// Timestamp contains ...
+// Timestamp contains authentication data for a timestamp.
 type Timestamp struct {
 	CanonicalizationMethod *AlgorithmMethod `xml:"ds:CanonicalizationMethod"`
 	EncapsulatedTimeStamp  string           `xml:"xades:EncapsulatedTimeStamp"`
 }
 
-// TimestampSignatureValue contains ...
+// TimestampSignatureValue is the value of the signature timestamp.
 type TimestampSignatureValue struct {
 	XMLName   xml.Name
 	Namespace string `xml:"xmlns:ds,attr"`

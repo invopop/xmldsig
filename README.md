@@ -1,18 +1,101 @@
 # XML DSig
 
-Partial implementation of the XML DSig standard for Go. Can be used to manage certificates in .p12 format and generate signatures typically used with UBL invoice documents or similar local standards.
+Partial implementation of the XML DSig and XAdES standards for Go. Accepts certificates in .p12/.pfx format and generates signatures typically used with UBL invoice documents or similar local standards.
 
 [![Lint](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/lint.yaml)
 [![Test Go](https://github.com/invopop/xmldsig/actions/workflows/test.yaml/badge.svg)](https://github.com/invopop/xmldsig/actions/workflows/test.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/invopop/xmldsig)](https://goreportcard.com/report/github.com/invopop/xmldsig)
 [![GoDoc](https://godoc.org/github.com/invopop/xmldsig?status.svg)](https://godoc.org/github.com/invopop/xmldsig)
-![Latest Tag](https://img.shields.io/github/v/tag/invopop/xmldsig)
+![Latest Tag](https://img.shields.io/github/v/tag/MieszkoGulinski/xmldsig)
 
-## NOTES
+## Available settings
 
-- Canonicalisation: at the moment is _EXTREMELY_ limited. It'll handle missing namespaces on root elements, but you **MUST** ensure the Go structures (`type struct`) you intend to Marshal contain attributes in their canonical order: first namespaces, then regular attributes.
+The library supports multiple configuration options. It's possible to specify options such as:
+
+- whether to attach QualifyingProperties element (XAdES) or not (XML DSig but without XAdES)
+- what canonicalizers to use
+- what hashes to use
+- whether to include reference to KeyInfo in SignedInfo (some APIs require it, some don't)
+- whether to include the public key value (RSA or ECDSA) in KeyInfo (some APIs require it, some don't)
+
+These options are passed to the library by creating structs of type `xmldsig.XMLDSigConfig` and `xmldsig.XAdESConfig`, and passing them to `xmldsig.WithXMLDSigConfig` and `xmldsig.WithXAdES` respectively. Settings in these structs will override default settings.
+
+For convenience, there are **predefined option builders**:
+
+- `facturae.XMLDSigConfig()` and `facturae.XAdESConfig()` for Spanish FacturaE
+- `ksef.XAdESConfig()` for Polish KSeF (no need to override XMLDSig defaults)
+
+### Example of fully custom configuration, overriding all defaults
+
+```go
+xmlConfig := xmldsig.XMLDSigConfig{
+	DataCanonicalizer:            dsig.MakeC14N10RecCanonicalizer(), // Canonicalize the XML that is signed
+	DataHash:                     crypto.SHA512,                     // Hash algorithm for the signed XML
+	SignedInfoCanonicalizer:      dsig.MakeC14N10RecCanonicalizer(), // Canonicalization algorithm for SignedInfo
+	SignedInfoHash:               crypto.SHA256,                     // Hash algorithm for SignedInfo
+	IncludeKeyValue:              false,                             // Whether to include the public key in KeyInfo
+	ReferenceKeyInfoInSignedInfo: true,                              // Whether SignedInfo should reference KeyInfo
+	KeyInfoCanonicalizer:         dsig.MakeC14N10RecCanonicalizer(),
+	KeyInfoHash:                  crypto.SHA512,
+}
+
+xadesConfig := xmldsig.XAdESConfig{
+	TimestampFormatter:            customTimestampFormatter,          // Timestamp formatter for SigningTime
+	IssuerSerializer:              nil,                               // Serializer for issuer names, nil for default
+	SignedPropertiesCanonicalizer: dsig.MakeC14N10RecCanonicalizer(),
+	SignedPropertiesHash:          crypto.SHA512,
+	SigningCertificateHash:        crypto.SHA512,
+}
+
+signature, err := xmldsig.Sign(data,
+	xmldsig.WithCertificate(cert),
+	xmldsig.WithXMLDSigConfig(xmlConfig),
+	xmldsig.WithXAdES(&xadesConfig),
+)
+```
+
+Example of a custom timestamp formatter:
+
+```go
+func customTimestampFormatter(t time.Time) string {
+	return t.UTC().Format("2006-01-02T15:04:05.0000000+00:00")
+}
+```
 
 ## Usage Example
+
+This example shows how to sign a document using the XAdES standard with Polish KSeF predefined settings. In KSeF, signing an XML is used when logging into the API.
+
+```go
+type AuthTokenRequest struct {
+	XMLName       xml.Name `xml:"AuthTokenRequest"`
+	XMLNamespace  string   `xml:"xmlns,attr"`
+	XSI           string   `xml:"xmlns:xsi,attr"`
+	XSD           string   `xml:"xmlns:xsd,attr"`
+	Challenge     string   `xml:"Challenge"`
+	ContextIdentifier *ContextIdentifier `xml:"ContextIdentifier"`
+	Signature     *xmldsig.Signature `xml:"ds:Signature,omitempty"` // Add signature object!
+}
+
+func main() {
+	authTokenRequest := &AuthTokenRequest{
+		// ... fill in the rest of the fields as needed ...
+	}
+
+	data, _ := xml.Marshal(authTokenRequest)
+	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
+	authTokenRequest.Signature, _ = xmldsig.Sign(data,
+		xmldsig.WithCertificate(cert),
+		xmldsig.WithXAdES(ksef.XAdESConfig()),
+	)
+
+	// Now output the data
+	out, _ := xml.Marshal(authTokenRequest)
+	fmt.Println(string(out))
+}
+```
+
+This example shows how to sign a document using the XAdES standard with Spanish FacturaE predefined settings. Note that this system requires additional configuration parameters to generate additional elements in the signature.
 
 ```go
 type SampleDoc struct {
@@ -23,12 +106,12 @@ type SampleDoc struct {
 }
 
 func main() {
-    doc := &SampleDoc{
+	doc := &SampleDoc{
 		TestNamespace: "http://invopop.com/xml/test",
 		Title:         "This is a test",
 	}
 	// Using XAdES FacturaE example policy config
-	xades := &xmldsig.XAdESConfig{
+	facturaeConfig := facturae.XAdESConfig(xmldsig.XAdESConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
 		Description: "test",
 		Policy: &xmldsig.XAdESPolicyConfig{
@@ -37,17 +120,18 @@ func main() {
 			Algorithm:   "http://www.w3.org/2000/09/xmldsig#sha1",
 			Hash:        "Ohixl6upD6av8N7pEvDABhEL6hM=",
 		},
-	}
-    data, _ := xml.Marshal(doc)
-    cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
-    doc.Signature, _ = xmldsig.Sign(data,
+	})
+	data, _ := xml.Marshal(doc)
+	cert, _ := xmldsig.LoadCertificate("./invopop.p12", "invopop")
+	doc.Signature, _ = xmldsig.Sign(data,
 		xmldsig.WithCertificate(cert),
-		xmldsig.WithXAdES(xades),
+		xmldsig.WithXMLDSigConfig(facturae.XMLDSigConfig()),
+		xmldsig.WithXAdES(&facturaeConfig),
 	)
 
-    // Now output the data
-    out, _ := xml.Marshal(doc)
-    fmt.Println(string(out))
+	// Now output the data
+	out, _ := xml.Marshal(doc)
+	fmt.Println(string(out))
 }
 ```
 
@@ -57,11 +141,13 @@ Support is also included for using a Time Stamp Authority (TSA). Simply add the 
 xmldsig.WithTimestamp(xmldsig.TimestampFreeTSA) // uses https://freetsa.org/tsr
 ```
 
+Using this option requires XAdES support to be enabled (by calling `WithXAdES`), as the timestamp is added to `QualifyingProperties` > `UnsignedProperties` > `SignatureTimestamp`.
+
 ## Certificates
 
 Signing and certificates can be overwhelming. OpenSSL is the tool to use for clarifying what the situation is and this page has a useful set of commands: https://www.sslshopper.com/article-most-common-openssl-commands.html
 
-This library requires certificates in PKCS12 DER format (`.pki` or `.p12` extension). If you don't have something like that, use the OpenSSL tools to convert between X509 (`.pem`) format and PKCS12.
+This library requires certificates in PKCS12 DER format (`.pfx` or `.p12` extension). If you don't have something like that, use the OpenSSL tools to convert between X509 (`.pem`) format and PKCS12.
 
 The order of certificates is important, the main certificate must come first. You can check order using the following command:
 
@@ -80,6 +166,16 @@ Split the resulting `.pem` file into multiple parts for the key, certificate, an
 ```
 openssl pkcs12 -export -out invopop.p12 -inkey invopop.key -in invopop.crt -certfile invopop.ca
 ```
+
+## Changes
+
+### Add information about canonicalization method to SignedInfo
+
+Before this change, the library was performing canonicalization on the signed data and `SignedProperties` elements, but was not adding appropriate `Transform` elements, describing the canonicalization method, to the `SignedInfo` element.
+
+### Updated methods
+
+- As FacturaE-specific options were previously hardcoded and now were moved to API-specific configuration, `xmldsig.WithXAdES` now must be combined with `xmldsig.WithXAdES(facturae.XAdESConfig(...))`.
 
 ## Copyright
 
