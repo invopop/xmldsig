@@ -2,6 +2,8 @@ package xmldsig
 
 import (
 	"crypto"
+	"crypto/ecdh"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -12,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
 
@@ -24,7 +27,7 @@ var ErrNotFound = errors.New("not found")
 // Certificate stores information about a signing Certificate
 // which can be used to sign a facturae XML
 type Certificate struct {
-	privateKey  *rsa.PrivateKey
+	privateKey  crypto.Signer
 	certificate *x509.Certificate
 	CaChain     []*x509.Certificate
 	issuer      *pkix.RDNSequence
@@ -73,9 +76,12 @@ func LoadCertificate(path, password string) (*Certificate, error) {
 		return nil, err
 	}
 
-	rsaPrivateKey := privateKey.(*rsa.PrivateKey)
+	signer, ok := privateKey.(crypto.Signer)
+	if !ok {
+		return nil, fmt.Errorf("unsupported key type")
+	}
 	return &Certificate{
-		privateKey:  rsaPrivateKey,
+		privateKey:  signer,
 		certificate: certificate,
 		CaChain:     caChain,
 		issuer:      issuer,
@@ -98,11 +104,50 @@ func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
 	}
 	digest := hasher.Sum(nil)
 
-	signature, signingErr := rsa.SignPKCS1v15(rand.Reader, cert.privateKey, hash, digest)
+	// RSA and ECDSA certificates require different signing code
+	// (even though both implement crypto.Signer)
+	var signature []byte
+	var signingErr error
+	switch cert.privateKey.(type) {
+	case *rsa.PrivateKey:
+		signature, signingErr = cert.privateKey.Sign(rand.Reader, digest, hash)
+	case *ecdsa.PrivateKey:
+		// When using ECDSA, privateKey.Sign returns signature in DER format, but XML DSig
+		// requires the signature to be in the concatenated format (r || s)
+		signature, signingErr = signECDSA(cert.privateKey.(*ecdsa.PrivateKey), digest, hash)
+	default:
+		return "", fmt.Errorf("unsupported key type: %T", cert.privateKey)
+	}
+
 	if signingErr != nil {
 		return "", signingErr
 	}
 	return base64.StdEncoding.EncodeToString(signature), nil
+}
+
+type ecdsaSignature struct {
+	R, S *big.Int
+}
+
+// signECDSA creates a signature for the provided digest using the private key,
+// and returns it in the concatenated format (r || s) required by XML DSig
+func signECDSA(privateKey *ecdsa.PrivateKey, digest []byte, hash crypto.Hash) ([]byte, error) {
+	derSig, err := privateKey.Sign(rand.Reader, digest, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	var sig ecdsaSignature
+	if _, err := asn1.Unmarshal(derSig, &sig); err != nil {
+		return nil, err
+	}
+
+	keyBytes := (privateKey.Curve.Params().BitSize + 7) / 8
+	rBytes := sig.R.FillBytes(make([]byte, keyBytes))
+	sBytes := sig.S.FillBytes(make([]byte, keyBytes))
+	signature := append(rBytes, sBytes...)
+
+	return signature, nil
 }
 
 // Fingerprint returns the requested hash of the certificate bytes.
@@ -131,9 +176,13 @@ func (cert *Certificate) PEM() []byte {
 	return PEMCertificate(cert.certificate)
 }
 
-// PrivateKey provides the private key in PEM format.
+// PrivateKey provides the private key in PEM format, if it's a RSA key.
 func (cert *Certificate) PrivateKey() []byte {
-	return PEMPrivateRSAKey(cert.privateKey)
+	privateKey, ok := cert.privateKey.(*rsa.PrivateKey)
+	if !ok {
+		return nil
+	}
+	return PEMPrivateRSAKey(privateKey)
 }
 
 // NakedPEM converts a x509 formated certificate to the PEM format without
@@ -184,16 +233,46 @@ func (cert *Certificate) PublicKeyAlgorithm() x509.PublicKeyAlgorithm {
 // PrivateKeyInfo exposes public components of the configured private key that
 // may be embedded in ds:KeyInfo blocks for interoperability.
 func (cert *Certificate) PrivateKeyInfo() *PrivateKeyInfo {
-	exponentBytes := make([]byte, 3)
-	exponentBytes[0] = byte(cert.privateKey.E >> 16)
-	exponentBytes[1] = byte(cert.privateKey.E >> 8)
-	exponentBytes[2] = byte(cert.privateKey.E)
+	switch privateKey := cert.privateKey.(type) {
+	case *rsa.PrivateKey:
+		exponentBytes := make([]byte, 3)
+		exponentBytes[0] = byte(privateKey.E >> 16)
+		exponentBytes[1] = byte(privateKey.E >> 8)
+		exponentBytes[2] = byte(privateKey.E)
 
-	return &PrivateKeyInfo{
-		Algorithm: KeyAlgorithmRSA,
-		Modulus:   base64.StdEncoding.EncodeToString(cert.privateKey.N.Bytes()),
-		Exponent:  base64.StdEncoding.EncodeToString(exponentBytes),
+		return &PrivateKeyInfo{
+			Algorithm: KeyAlgorithmRSA,
+			Modulus:   base64.StdEncoding.EncodeToString(privateKey.N.Bytes()),
+			Exponent:  base64.StdEncoding.EncodeToString(exponentBytes),
+		}
+	case *ecdsa.PrivateKey:
+		curveEntry, ok := curveMap[privateKey.Curve.Params().Name]
+		if !ok {
+			return nil
+		}
+		// ecdsa.PrivateKey and ecdh.PrivateKey are not compatible, so we need to convert one to another
+		ecdhPrivateKey, err := curveEntry.curve.NewPrivateKey(privateKey.D.Bytes())
+		if err != nil {
+			return nil
+		}
+		ecdhPublicKey := ecdhPrivateKey.PublicKey()
+		return &PrivateKeyInfo{
+			Algorithm: KeyAlgorithmECDSA,
+			CurveURI:  curveEntry.uri,
+			PublicKey: base64.StdEncoding.EncodeToString(ecdhPublicKey.Bytes()),
+		}
 	}
+
+	return nil
+}
+
+var curveMap = map[string]struct {
+	uri   string
+	curve ecdh.Curve
+}{
+	"P-256": {"urn:oid:1.2.840.10045.3.1.7", ecdh.P256()},
+	"P-384": {"urn:oid:1.3.132.0.34", ecdh.P384()},
+	"P-521": {"urn:oid:1.3.132.0.35", ecdh.P521()},
 }
 
 // TLSAuthConfig prepares TLS authentication connection details ready to use
