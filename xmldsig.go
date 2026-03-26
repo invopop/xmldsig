@@ -57,11 +57,11 @@ func WithXMLDSigConfig(opts XMLDSigConfig) Option {
 	}
 }
 
-// WithXAdES enables XAdES support, and allows passing options overriding default XAdES settings.
-// Note that unlike other options, this one accepts a pointer to XAdESConfig - this is for backward compatibility.
-func WithXAdES(opts *XAdESConfig) Option {
+// WithXAdESConfig enables XAdES support with the given config. Pass a zero-value
+// XAdESConfig to use default XAdES settings.
+func WithXAdESConfig(opts XAdESConfig) Option {
 	return func(o *options) error {
-		o.xadesConfig = normalizeXAdESConfig(opts)
+		o.xadesConfig = &opts
 		return nil
 	}
 }

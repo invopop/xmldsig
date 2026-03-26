@@ -62,7 +62,8 @@ func normalizeXMLDSigConfig(opts XMLDSigConfig) XMLDSigConfig {
 // normalizeXAdESConfig fills missing XAdES values with defaults.
 func normalizeXAdESConfig(opts *XAdESConfig) *XAdESConfig {
 	if opts == nil {
-		opts = &XAdESConfig{}
+		// XAdES is not enabled, don't set defaults
+		return nil
 	}
 
 	if opts.TimestampFormatter == nil {

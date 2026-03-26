@@ -149,7 +149,7 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 	}
 
 	o.xmldsigConfig = normalizeXMLDSigConfig(o.xmldsigConfig)
-	// XAdES options are normalized in WithXAdES config function
+	o.xadesConfig = normalizeXAdESConfig(o.xadesConfig)
 
 	// Extract root namespaces
 	if err := addRootNamespaces(o.namespaces, data); err != nil {

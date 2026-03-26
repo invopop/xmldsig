@@ -52,7 +52,7 @@ func TestNormalizeXMLDSigConfigPreservesValues(t *testing.T) {
 }
 
 func TestNormalizeXAdESConfigDefaults(t *testing.T) {
-	opts := normalizeXAdESConfig(nil)
+	opts := normalizeXAdESConfig(&XAdESConfig{})
 	if opts == nil {
 		t.Fatal("expected normalizeXAdESConfig to return non-nil options")
 	}
@@ -104,10 +104,10 @@ func TestWithXMLDSigConfig(t *testing.T) {
 }
 
 func TestWithXAdES(t *testing.T) {
-	raw := &XAdESConfig{
+	raw := XAdESConfig{
 		Role: XAdESSignerRole("issuer"),
 	}
-	opt := WithXAdES(raw)
+	opt := WithXAdESConfig(raw)
 	o := &options{}
 	if err := opt(o); err != nil {
 		t.Fatalf("WithXAdES returned error: %v", err)

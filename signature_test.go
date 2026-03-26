@@ -182,9 +182,8 @@ func xadesConfig() xmldsig.XAdESConfig {
 }
 
 func facturaeOptions(cfg xmldsig.XAdESConfig) (xmldsig.Option, xmldsig.Option) {
-	opts := facturae.XAdESConfig(cfg)
 	return xmldsig.WithXMLDSigConfig(facturae.XMLDSigConfig()),
-		xmldsig.WithXAdES(&opts)
+		xmldsig.WithXAdESConfig(facturae.XAdESConfig(cfg))
 }
 
 func getCertificate() (*xmldsig.Certificate, error) {
