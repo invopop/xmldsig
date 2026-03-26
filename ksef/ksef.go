@@ -7,7 +7,15 @@ import (
 	"time"
 
 	"github.com/invopop/xmldsig"
+	dsig "github.com/russellhaering/goxmldsig"
 )
+
+// XMLDSigConfig returns the KSeF-specific XMLDSig configuration.
+func XMLDSigConfig() xmldsig.XMLDSigConfig {
+	return xmldsig.XMLDSigConfig{
+		SignedInfoCanonicalizer: dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(""),
+	}
+}
 
 // XAdESConfig returns the KSeF-specific XAdES configuration.
 func XAdESConfig() xmldsig.XAdESConfig {
