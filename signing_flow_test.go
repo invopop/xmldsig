@@ -2,11 +2,13 @@ package xmldsig_test
 
 import (
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"encoding/xml"
+	"math/big"
 	"os"
 	"testing"
 
@@ -37,7 +39,7 @@ func verifySigningFlow(t *testing.T, xmlPath string) {
 
 	signature, err := xmldsig.Sign(originalXML,
 		xmldsig.WithCertificate(certificate),
-		xmldsig.WithXAdES(&xmldsig.XAdESConfig{}),
+		xmldsig.WithXAdESConfig(xmldsig.XAdESConfig{}),
 	)
 	require.NoError(t, err)
 
@@ -157,9 +159,36 @@ func verifySignatureValue(t *testing.T, sig *xmldsig.Signature, signatureElement
 	signatureValue, err := base64.StdEncoding.DecodeString(sig.Value.Value)
 	require.NoError(t, err)
 
-	publicKey := extractRSAPublicKey(t, certificate)
-	err = rsa.VerifyPKCS1v15(publicKey, hash, digest, signatureValue)
-	require.NoError(t, err, "SignatureValue does not match SignedInfo digest")
+	publicKey := extractPublicKey(t, certificate)
+	verifySignature(t, publicKey, hash, digest, signatureValue)
+}
+
+func verifySignature(t *testing.T, publicKey crypto.PublicKey, hash crypto.Hash, digest []byte, signatureValue []byte) {
+	t.Helper()
+
+	switch pub := publicKey.(type) {
+	case *rsa.PublicKey:
+		err := rsa.VerifyPKCS1v15(pub, hash, digest, signatureValue)
+		require.NoError(t, err, "RSA signature verification failed: SignatureValue does not match SignedInfo digest")
+
+	case *ecdsa.PublicKey:
+		// ECDSA signatures in XML-DSig are in R||S concatenated format (not ASN.1)
+		// Each value is fixed size based on curve field size
+		curveOrderByteSize := (pub.Curve.Params().BitSize + 7) / 8
+		expectedSize := 2 * curveOrderByteSize
+
+		require.Equal(t, expectedSize, len(signatureValue), "ECDSA signature has wrong length")
+
+		// Split signature into R and S
+		r := new(big.Int).SetBytes(signatureValue[:curveOrderByteSize])
+		s := new(big.Int).SetBytes(signatureValue[curveOrderByteSize:])
+
+		valid := ecdsa.Verify(pub, digest, r, s)
+		require.True(t, valid, "ECDSA signature verification failed: SignatureValue does not match SignedInfo digest")
+
+	default:
+		t.Fatalf("unsupported public key type: %T", publicKey)
+	}
 }
 
 func canonicalizerFromTransforms(t *testing.T, transforms *xmldsig.Transforms) dsig.Canonicalizer {
@@ -246,9 +275,19 @@ func hashFromSignatureMethod(t *testing.T, algorithm string) crypto.Hash {
 	t.Helper()
 
 	switch algorithm {
+	// RSA algorithms
 	case xmldsig.AlgDSigRSASHA256:
 		return crypto.SHA256
 	case xmldsig.AlgDSigRSASHA512:
+		return crypto.SHA512
+	// ECDSA algorithms
+	case xmldsig.AlgDSigECDSASHA224:
+		return crypto.SHA224
+	case xmldsig.AlgDSigECDSASHA256:
+		return crypto.SHA256
+	case xmldsig.AlgDSigECDSASHA384:
+		return crypto.SHA384
+	case xmldsig.AlgDSigECDSASHA512:
 		return crypto.SHA512
 	default:
 		t.Fatalf("unsupported signature algorithm: %s", algorithm)
@@ -266,7 +305,7 @@ func computeDigestBase64(t *testing.T, data []byte, hash crypto.Hash) string {
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
-func extractRSAPublicKey(t *testing.T, certificate *xmldsig.Certificate) *rsa.PublicKey {
+func extractPublicKey(t *testing.T, certificate *xmldsig.Certificate) crypto.PublicKey {
 	t.Helper()
 
 	block, _ := pem.Decode(certificate.PEM())
@@ -275,9 +314,7 @@ func extractRSAPublicKey(t *testing.T, certificate *xmldsig.Certificate) *rsa.Pu
 	parsed, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
 
-	pub, ok := parsed.PublicKey.(*rsa.PublicKey)
-	require.True(t, ok, "certificate does not contain an RSA public key")
-	return pub
+	return parsed.PublicKey
 }
 
 func findReference(refs []*xmldsig.Reference, predicate func(*xmldsig.Reference) bool) *xmldsig.Reference {
