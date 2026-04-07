@@ -1,6 +1,8 @@
 package xmldsig
 
 import (
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -21,10 +23,11 @@ func (r XAdESSignerRole) String() string {
 
 // XAdESPolicyConfig provides a convenient way to specify what policy details to add to the XAdES signature.
 type XAdESPolicyConfig struct {
-	URL         string `json:"url"`                   // URL to the policy definition
-	Description string `json:"description,omitempty"` // Optional human description
-	Algorithm   string `json:"algorithm"`             // eg. SHA1 or SHA256
-	Hash        string `json:"hash"`                  // Base64 encoded hash (usually provided with policy)
+	URL         string `json:"url"`                    // URL to the policy definition; also used as SPURI qualifier when Identifier is set
+	Identifier  string `json:"identifier,omitempty"`   // OID/URN identifier (when set, used as the policy identifier instead of URL)
+	Description string `json:"description,omitempty"`  // Optional human description
+	Algorithm   string `json:"algorithm"`              // eg. SHA1 or SHA256
+	Hash        string `json:"hash"`                   // Base64 encoded hash (usually provided with policy)
 }
 
 // QualifyingProperties contains XAdES-specific signature data. XAdES-specific namespace is required, so we use `xades` prefix.
@@ -55,7 +58,7 @@ type SignedSignatureProperties struct {
 
 // SigningCertificate encloses certificate details required by XAdES.
 type SigningCertificate struct {
-	Cert *Cert `xml:"xades:Cert"`
+	Cert []*Cert `xml:"xades:Cert"`
 }
 
 // Cert encapsulates digest and issuer information for the signing certificate.
@@ -119,8 +122,19 @@ type PolicyIdentifier struct {
 
 // PolicySignaturePolicyID contains the policy identifier and optional hash data.
 type PolicySignaturePolicyID struct {
-	SigPolicyID   PolicySigPolicyID    `xml:"xades:SigPolicyId"`
-	SigPolicyHash *PolicySigPolicyHash `xml:"xades:SigPolicyHash,omitempty"`
+	SigPolicyID         PolicySigPolicyID    `xml:"xades:SigPolicyId"`
+	SigPolicyHash       *PolicySigPolicyHash `xml:"xades:SigPolicyHash,omitempty"`
+	SigPolicyQualifiers *SigPolicyQualifiers `xml:"xades:SigPolicyQualifiers,omitempty"`
+}
+
+// SigPolicyQualifiers holds policy qualifier elements such as SPURI.
+type SigPolicyQualifiers struct {
+	SigPolicyQualifier []SigPolicyQualifier `xml:"xades:SigPolicyQualifier"`
+}
+
+// SigPolicyQualifier contains a single policy qualifier (e.g. SPURI).
+type SigPolicyQualifier struct {
+	SPURI string `xml:"xades:SPURI"`
 }
 
 // PolicySigPolicyID wraps identifier and description fields.
@@ -154,16 +168,41 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 	}
 
 	signingCertificate := &SigningCertificate{
-		Cert: &Cert{
-			CertDigest: &CertDigest{
-				DigestMethod: &AlgorithmMethod{Algorithm: certDigestAlgorithm},
-				DigestValue:  fingerprint,
-			},
-			IssuerSerial: &IssuerSerial{
-				X509IssuerName:   s.serializeIssuer(cert),
-				X509SerialNumber: cert.SerialNumber(),
+		Cert: []*Cert{
+			{
+				CertDigest: &CertDigest{
+					DigestMethod: &AlgorithmMethod{Algorithm: certDigestAlgorithm},
+					DigestValue:  fingerprint,
+				},
+				IssuerSerial: &IssuerSerial{
+					X509IssuerName:   s.serializeIssuer(cert),
+					X509SerialNumber: cert.SerialNumber(),
+				},
 			},
 		},
+	}
+
+	if s.opts.xadesConfig.IncludeCaChain {
+		for _, ca := range cert.CaChain {
+			caFingerprint, err := digestBytes(ca.Raw, certHash)
+			if err != nil {
+				return nil, fmt.Errorf("CA certificate fingerprint: %w", err)
+			}
+			caIssuer := &pkix.RDNSequence{}
+			if _, err := asn1.Unmarshal(ca.RawIssuer, caIssuer); err != nil {
+				return nil, fmt.Errorf("parsing CA issuer: %w", err)
+			}
+			signingCertificate.Cert = append(signingCertificate.Cert, &Cert{
+				CertDigest: &CertDigest{
+					DigestMethod: &AlgorithmMethod{Algorithm: certDigestAlgorithm},
+					DigestValue:  caFingerprint,
+				},
+				IssuerSerial: &IssuerSerial{
+					X509IssuerName:   s.serializeRDNSequence(caIssuer),
+					X509SerialNumber: ca.SerialNumber.String(),
+				},
+			})
+		}
 	}
 
 	signedSignatureProps := &SignedSignatureProperties{
@@ -186,12 +225,19 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 }
 
 func (s *Signature) serializeIssuer(cert *Certificate) string {
-	if s.opts.xadesConfig != nil {
-		if serializer := s.opts.xadesConfig.IssuerSerializer; serializer != nil && cert.issuer != nil {
-			return serializer(*cert.issuer)
-		}
+	if cert.issuer != nil {
+		return s.serializeRDNSequence(cert.issuer)
 	}
 	return cert.Issuer()
+}
+
+func (s *Signature) serializeRDNSequence(issuer *pkix.RDNSequence) string {
+	if s.opts.xadesConfig != nil {
+		if serializer := s.opts.xadesConfig.IssuerSerializer; serializer != nil {
+			return serializer(*issuer)
+		}
+	}
+	return issuer.String()
 }
 
 func buildSignerRole(role XAdESSignerRole) *SignerRole {
@@ -210,11 +256,16 @@ func buildPolicyIdentifier(policy *XAdESPolicyConfig) *PolicyIdentifier {
 		return nil
 	}
 
-	return &PolicyIdentifier{
+	identifier := policy.URL
+	if policy.Identifier != "" {
+		identifier = policy.Identifier
+	}
+
+	pi := &PolicyIdentifier{
 		SignaturePolicyID: &PolicySignaturePolicyID{
 			SigPolicyID: PolicySigPolicyID{
 				Identifier: Identifier{
-					Value: policy.URL,
+					Value: identifier,
 				},
 				Description: policy.Description,
 			},
@@ -226,6 +277,17 @@ func buildPolicyIdentifier(policy *XAdESPolicyConfig) *PolicyIdentifier {
 			},
 		},
 	}
+
+	// When both Identifier and URL are set, add the URL as an SPURI qualifier
+	if policy.Identifier != "" && policy.URL != "" {
+		pi.SignaturePolicyID.SigPolicyQualifiers = &SigPolicyQualifiers{
+			SigPolicyQualifier: []SigPolicyQualifier{
+				{SPURI: policy.URL},
+			},
+		}
+	}
+
+	return pi
 }
 
 func buildSignedDataObjectProperties(format *DataObjectFormat, referenceID string) *SignedDataObjectProperties {

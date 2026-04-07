@@ -25,6 +25,11 @@ const (
 	DSig  = "ds"
 )
 
+// Reference type URIs.
+const (
+	ReferenceTypeObject = "http://www.w3.org/2000/09/xmldsig#Object"
+)
+
 // Signature contains the complete signature to be added
 // to the document.
 type Signature struct {
@@ -330,12 +335,18 @@ func (s *Signature) buildSignedInfo() error {
 		return fmt.Errorf("document digest algorithm: %w", err)
 	}
 	docTransforms := []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
-	if alg := dataCanonicalizer.Algorithm().String(); alg != "" {
-		docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
+	if !s.opts.xmldsigConfig.OmitDataCanonicalizationTransform {
+		if alg := dataCanonicalizer.Algorithm().String(); alg != "" {
+			docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
+		}
+	}
+	var docRefType string
+	if !s.opts.xmldsigConfig.OmitDocumentReferenceType {
+		docRefType = ReferenceTypeObject
 	}
 	si.Reference = append(si.Reference, &Reference{
 		ID:   fmt.Sprintf(signedDataReferenceID, s.opts.docID),
-		Type: "http://www.w3.org/2000/09/xmldsig#Object",
+		Type: docRefType,
 		URI:  "",
 		Transforms: &Transforms{
 			Transform: docTransforms,
