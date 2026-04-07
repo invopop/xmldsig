@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/invopop/xmldsig"
-	"github.com/invopop/xmldsig/facturae"
+	"github.com/invopop/xmldsig/profiles/facturae"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

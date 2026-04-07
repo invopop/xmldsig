@@ -54,7 +54,7 @@ func TestKsefIssuerSerializerMatchesCertificate(t *testing.T) {
 	// But usually go test changes working directory to the package directory.
 	// We need to verify where "certs/cert-20260102-131809.pfx" is relative to ksef package.
 	// It is in ../certs/
-	data, err := os.ReadFile("../certs/cert-20260102-131809.pfx")
+	data, err := os.ReadFile("../../certs/cert-20260102-131809.pfx")
 	if err != nil {
 		t.Fatalf("failed to read certificate: %v", err)
 	}
