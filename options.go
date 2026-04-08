@@ -10,14 +10,16 @@ import (
 
 // XMLDSigConfig configures canonicalization, hashing, and KeyInfo handling for raw XML DSig signatures.
 type XMLDSigConfig struct {
-	DataCanonicalizer            dsig.Canonicalizer
-	DataHash                     crypto.Hash
-	IncludeKeyValue              bool
-	ReferenceKeyInfoInSignedInfo bool
-	KeyInfoHash                  crypto.Hash
-	KeyInfoCanonicalizer         dsig.Canonicalizer
-	SignedInfoCanonicalizer      dsig.Canonicalizer
-	SignedInfoHash               crypto.Hash
+	DataCanonicalizer                 dsig.Canonicalizer
+	DataHash                          crypto.Hash
+	IncludeKeyValue                   bool
+	ReferenceKeyInfoInSignedInfo      bool
+	KeyInfoHash                       crypto.Hash
+	KeyInfoCanonicalizer              dsig.Canonicalizer
+	SignedInfoCanonicalizer           dsig.Canonicalizer
+	SignedInfoHash                    crypto.Hash
+	OmitDocumentReferenceType         bool
+	OmitDataCanonicalizationTransform bool
 }
 
 // XAdESConfig configures the XAdES-specific properties.
@@ -34,6 +36,7 @@ type XAdESConfig struct {
 	Description      string
 	DataObjectFormat *DataObjectFormat
 	Policy           *XAdESPolicyConfig
+	IncludeCaChain   bool
 }
 
 // normalizeXMLDSigConfig fills missing XMLDSig values with defaults.

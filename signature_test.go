@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/invopop/xmldsig"
-	"github.com/invopop/xmldsig/facturae"
+	"github.com/invopop/xmldsig/profiles/facturae"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,6 +166,57 @@ func TestSignature(t *testing.T) {
 		assert.NotEmpty(t, signature.KeyInfo.KeyValue.RSA.Exponent, "Exponent should not be empty")
 	})
 
+	t.Run("should include policy identifier and SPURI when both provided", func(t *testing.T) {
+		cfg := xmldsig.XAdESConfig{
+			Policy: &xmldsig.XAdESPolicyConfig{
+				Identifier: "urn:oid:2.16.724.1.3.1.1.2.1.9",
+				URL:        "https://sede.administracion.gob.es/politica_de_firma_anexo_1.pdf",
+				Algorithm:  "http://www.w3.org/2000/09/xmldsig#sha1",
+				Hash:       "G7roucf600+f03r/o0bAOQ6WAs0=",
+			},
+		}
+
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXAdESConfig(cfg),
+		)
+		require.NoError(t, err)
+
+		sp := signature.Object.QualifyingProperties.SignedProperties
+		require.NotNil(t, sp)
+		require.NotNil(t, sp.SignedSignatureProperties.SignaturePolicyIdentifier)
+
+		pid := sp.SignedSignatureProperties.SignaturePolicyIdentifier.SignaturePolicyID
+		assert.Equal(t, "urn:oid:2.16.724.1.3.1.1.2.1.9", pid.SigPolicyID.Identifier.Value)
+		assert.Equal(t, "G7roucf600+f03r/o0bAOQ6WAs0=", pid.SigPolicyHash.DigestValue)
+
+		require.NotNil(t, pid.SigPolicyQualifiers)
+		require.Len(t, pid.SigPolicyQualifiers.SigPolicyQualifier, 1)
+		assert.Equal(t, "https://sede.administracion.gob.es/politica_de_firma_anexo_1.pdf",
+			pid.SigPolicyQualifiers.SigPolicyQualifier[0].SPURI)
+	})
+
+	t.Run("should not include policy qualifiers when only URL provided", func(t *testing.T) {
+		cfg := xmldsig.XAdESConfig{
+			Policy: &xmldsig.XAdESPolicyConfig{
+				URL:       "http://example.com/policy.pdf",
+				Algorithm: "http://www.w3.org/2000/09/xmldsig#sha1",
+				Hash:      "abc123=",
+			},
+		}
+
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXAdESConfig(cfg),
+		)
+		require.NoError(t, err)
+
+		pid := signature.Object.QualifyingProperties.SignedProperties.
+			SignedSignatureProperties.SignaturePolicyIdentifier.SignaturePolicyID
+		assert.Equal(t, "http://example.com/policy.pdf", pid.SigPolicyID.Identifier.Value)
+		assert.Nil(t, pid.SigPolicyQualifiers)
+	})
+
 }
 
 func xadesConfig() xmldsig.XAdESConfig {
@@ -189,15 +240,6 @@ func facturaeOptions(cfg xmldsig.XAdESConfig) (xmldsig.Option, xmldsig.Option) {
 func getCertificate() (*xmldsig.Certificate, error) {
 	return xmldsig.LoadCertificate(testCertificateFile, testCertificatePass)
 }
-
-/*
-func getExampleXML(t *testing.T) []byte {
-	data, err := os.ReadFile("./data/invoice-vat.xml")
-	require.NoError(t, err)
-
-	return data
-}
-*/
 
 func getTimestamp(signature *xmldsig.Signature) string {
 	return signature.Object.QualifyingProperties.
