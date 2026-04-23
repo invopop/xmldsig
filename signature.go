@@ -8,7 +8,6 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/invopop/gobl/uuid"
-	dsig "github.com/russellhaering/goxmldsig"
 )
 
 // Namespaces used in XML-DSig and XAdES.
@@ -27,7 +26,8 @@ const (
 
 // Reference type URIs.
 const (
-	ReferenceTypeObject = "http://www.w3.org/2000/09/xmldsig#Object"
+	ReferenceTypeObject  = "http://www.w3.org/2000/09/xmldsig#Object"
+	XpathFilterAlgorithm = "http://www.w3.org/TR/1999/REC-xpath-19991116"
 )
 
 // Signature contains the complete signature to be added
@@ -49,6 +49,7 @@ type Signature struct {
 // AlgorithmMethod contains URL identifier of the signing algorithm (e.g. RSA-SHA256)
 type AlgorithmMethod struct {
 	Algorithm string `xml:"Algorithm,attr"`
+	XPath     string `xml:"ds:XPath,omitempty"`
 }
 
 // SignedInfo contains the info that will be signed by
@@ -316,13 +317,19 @@ func (s *Signature) buildSignedInfo() error {
 		Reference: []*Reference{},
 	}
 
-	// Note: will add namespaces to the original properties
-	// as part of canonicalization, so we expect copies here.
+	var docToProcess = s.doc
+	if s.opts.xmldsigConfig.PreHashTransforms != nil {
+		transformed, err := s.opts.xmldsigConfig.PreHashTransforms(docToProcess)
+		if err != nil {
+			return fmt.Errorf("pre-hash transforms: %w", err)
+		}
+		docToProcess = transformed
+	}
 
 	// Add the document digest
 	dataCanonicalizer := s.opts.xmldsigConfig.DataCanonicalizer
 	dataHash := s.opts.xmldsigConfig.DataHash
-	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
+	canonicalizedDoc, err := canonicalizeWith(docToProcess, s.opts.namespaces, dataCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize document: %w", err)
 	}
@@ -334,15 +341,16 @@ func (s *Signature) buildSignedInfo() error {
 	if err != nil {
 		return fmt.Errorf("document digest algorithm: %w", err)
 	}
-	docTransforms := []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
+
+	var docRefType string
+	if !s.opts.xmldsigConfig.OmitDocumentReferenceType {
+		docRefType = ReferenceTypeObject
+	}
+	var docTransforms = s.opts.xmldsigConfig.DocumentTransforms
 	if !s.opts.xmldsigConfig.OmitDataCanonicalizationTransform {
 		if alg := dataCanonicalizer.Algorithm().String(); alg != "" {
 			docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
 		}
-	}
-	var docRefType string
-	if !s.opts.xmldsigConfig.OmitDocumentReferenceType {
-		docRefType = ReferenceTypeObject
 	}
 	si.Reference = append(si.Reference, &Reference{
 		ID:   fmt.Sprintf(signedDataReferenceID, s.opts.docID),
@@ -410,19 +418,22 @@ func (s *Signature) buildSignedInfo() error {
 		if err != nil {
 			return fmt.Errorf("xades digest algorithm: %w", err)
 		}
-		si.Reference = append(si.Reference, &Reference{
-			URI: "#" + sp.ID,
-			Transforms: &Transforms{
-				Transform: []*AlgorithmMethod{
-					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},
-				},
-			},
+		spRef := &Reference{
+			URI:  "#" + sp.ID,
 			Type: "http://uri.etsi.org/01903#SignedProperties",
 			DigestMethod: &AlgorithmMethod{
 				Algorithm: signedPropsAlgorithm,
 			},
 			DigestValue: spDigest,
-		})
+		}
+		if !s.opts.xadesConfig.OmitSignedPropertiesTransforms {
+			spRef.Transforms = &Transforms{
+				Transform: []*AlgorithmMethod{
+					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},
+				},
+			}
+		}
+		si.Reference = append(si.Reference, spRef)
 	}
 
 	s.SignedInfo = si

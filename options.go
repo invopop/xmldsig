@@ -20,6 +20,8 @@ type XMLDSigConfig struct {
 	SignedInfoHash                    crypto.Hash
 	OmitDocumentReferenceType         bool
 	OmitDataCanonicalizationTransform bool
+	DocumentTransforms                []*AlgorithmMethod
+	PreHashTransforms                 func([]byte) ([]byte, error)
 }
 
 // XAdESConfig configures the XAdES-specific properties.
@@ -32,11 +34,12 @@ type XAdESConfig struct {
 	SignedPropertiesHash          crypto.Hash
 
 	// XAdES-specific optional XML fields
-	Role             XAdESSignerRole
-	Description      string
-	DataObjectFormat *DataObjectFormat
-	Policy           *XAdESPolicyConfig
-	IncludeCaChain   bool
+	OmitSignedPropertiesTransforms bool
+	Role                           XAdESSignerRole
+	Description                    string
+	DataObjectFormat               *DataObjectFormat
+	Policy                         *XAdESPolicyConfig
+	IncludeCaChain                 bool
 }
 
 // normalizeXMLDSigConfig fills missing XMLDSig values with defaults.
@@ -58,6 +61,9 @@ func normalizeXMLDSigConfig(opts XMLDSigConfig) XMLDSigConfig {
 	}
 	if opts.SignedInfoHash == 0 {
 		opts.SignedInfoHash = crypto.SHA256
+	}
+	if len(opts.DocumentTransforms) == 0 {
+		opts.DocumentTransforms = []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
 	}
 	return opts
 }
