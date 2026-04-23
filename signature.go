@@ -455,7 +455,7 @@ func (s *Signature) buildSignatureValue() error {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash)
+	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormat)
 	if err != nil {
 		return fmt.Errorf("sign SignedInfo: %w", err)
 	}

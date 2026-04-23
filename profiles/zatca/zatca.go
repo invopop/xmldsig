@@ -18,6 +18,7 @@ func XMLDSigConfig() xmldsig.XMLDSigConfig {
 		DataHash:                          crypto.SHA256,
 		SignedInfoCanonicalizer:           dsig.MakeC14N11Canonicalizer(),
 		SignedInfoHash:                    crypto.SHA256,
+		ECDSAFormat:                       xmldsig.ECDSAFormatDER,
 		OmitDocumentReferenceType:         true,
 		OmitDataCanonicalizationTransform: true,
 		DocumentTransforms: []*xmldsig.AlgorithmMethod{
