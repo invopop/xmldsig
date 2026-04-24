@@ -21,10 +21,6 @@ func XMLDSigConfig() xmldsig.XMLDSigConfig {
 		ECDSAFormat:                       xmldsig.ECDSAFormatDER,
 		OmitDocumentReferenceType:         true,
 		OmitDataCanonicalizationTransform: true,
-		SignatureID:                       "signature",
-		SignedDataReferenceID:             "invoiceSignedData",
-		OmitSignatureValueID:              true,
-		OmitKeyInfoID:                     true,
 		SignDocumentDigest:                true,
 		DocumentTransforms: []*xmldsig.AlgorithmMethod{
 			{
@@ -58,10 +54,6 @@ func XAdESConfig() xmldsig.XAdESConfig {
 		IncludeCaChain:                 true,
 		HexEncodeDigests:               true,
 		HashPEMText:                    true,
-		SignedPropertiesID:             "xadesSignedProperties",
-		OmitQualifyingPropertiesID:     true,
-		TargetRaw:                      true,
-		SignedPropertiesReferenceType:  "http://www.w3.org/2000/09/xmldsig#SignatureProperties",
 		RawXMLSignedPropertiesDigest:   true,
 	}
 }

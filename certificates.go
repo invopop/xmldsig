@@ -179,7 +179,6 @@ func (cert *Certificate) Fingerprint(hash crypto.Hash) (string, error) {
 
 // FingerprintPEM returns the hash of the certificate's base64 PEM text
 // (without headers), hex-encoded and then base64-encoded: base64(hex(hash)).
-// Required by ZATCA which hashes the PEM text rather than DER bytes.
 func (cert *Certificate) FingerprintPEM(hash crypto.Hash) (string, error) {
 	return digestBytesHex([]byte(cert.NakedPEM()), hash)
 }

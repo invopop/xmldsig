@@ -21,8 +21,7 @@ func digestBytes(data []byte, hash crypto.Hash) (string, error) {
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
 
-// digestBytesHex creates a base64(hex(hash)) encoded digest. Used by ZATCA
-// which expects hex-encoded hash bytes inside the base64 value.
+// digestBytesHex creates a base64(hex(hash)) encoded digest.
 func digestBytesHex(data []byte, hash crypto.Hash) (string, error) {
 	if !hash.Available() {
 		return "", fmt.Errorf("hash %v not available", hash)

@@ -36,11 +36,11 @@ type XMLDSigConfig struct {
 	PreHashTransforms                 func([]byte) ([]byte, error)
 
 	// ID overrides — when set, replace the default UUID-based IDs.
-	SignatureID           string // root ds:Signature Id (default: "Signature-{docID}-Signature")
-	SignedDataReferenceID string // document ds:Reference Id (default: "Reference-{docID}")
-	OmitSignatureValueID  bool   // suppress Id on ds:SignatureValue
-	OmitKeyInfoID         bool   // suppress Id on ds:KeyInfo
-	SignDocumentDigest    bool   // sign the first Reference DigestValue (double-SHA-256) instead of canonical SignedInfo
+	// SignatureID           string // root ds:Signature Id (default: "Signature-{docID}-Signature")
+	// SignedDataReferenceID string // document ds:Reference Id (default: "Reference-{docID}")
+	// OmitSignatureValueID bool // suppress Id on ds:SignatureValue
+	// OmitKeyInfoID        bool // suppress Id on ds:KeyInfo
+	SignDocumentDigest bool // sign the first Reference DigestValue (double-SHA-256) instead of canonical SignedInfo
 }
 
 // XAdESConfig configures the XAdES-specific properties.
@@ -68,12 +68,12 @@ type XAdESConfig struct {
 	HashPEMText bool
 
 	// ID and structure overrides
-	SignedPropertiesID                string // override xades:SignedProperties Id (default: "Signature-{docID}-SignedProperties")
-	OmitQualifyingPropertiesID        bool   // suppress Id on xades:QualifyingProperties
-	TargetRaw                         bool   // use Target without "#" prefix
-	SignedPropertiesReferenceType     string // override Type on the SP ds:Reference (default: "http://uri.etsi.org/01903#SignedProperties")
-	MinimalSignedPropertiesNamespaces bool   // only include ds+xades namespaces in SP canonicalization (not all root namespaces)
-	RawXMLSignedPropertiesDigest      bool   // skip C14N, hash raw XML serialization (required by ZATCA which uses dom4j asXML())
+	// SignedPropertiesID                string // override xades:SignedProperties Id (default: "Signature-{docID}-SignedProperties")
+	// OmitQualifyingPropertiesID        bool   // suppress Id on xades:QualifyingProperties
+	// TargetRaw                         bool   // use Target without "#" prefix
+	// SignedPropertiesReferenceType     string // override Type on the SP ds:Reference (default: "http://uri.etsi.org/01903#SignedProperties")
+	// MinimalSignedPropertiesNamespaces bool   // only include ds+xades namespaces in SP canonicalization (not all root namespaces)
+	RawXMLSignedPropertiesDigest bool // skip C14N, hash raw XML serialization (required by ZATCA which uses dom4j asXML())
 }
 
 // normalizeXMLDSigConfig fills missing XMLDSig values with defaults.
