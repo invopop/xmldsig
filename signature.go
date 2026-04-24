@@ -1,6 +1,7 @@
 package xmldsig
 
 import (
+	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -83,14 +84,14 @@ type Transforms struct {
 
 // Value contains the signature itself (base64-encoded)
 type Value struct {
-	ID    string `xml:"Id,attr"`
+	ID    string `xml:"Id,attr,omitempty"`
 	Value string `xml:",chardata"`
 }
 
 // KeyInfo contains the public key and certificate information
 type KeyInfo struct {
 	XMLName xml.Name `xml:"ds:KeyInfo"`
-	ID      string   `xml:"Id,attr"`
+	ID      string   `xml:"Id,attr,omitempty"`
 
 	DSig11Namespace string `xml:"xmlns:dsig11,attr,omitempty"`
 
@@ -162,10 +163,15 @@ func newSignature(data []byte, opts ...Option) (*Signature, error) {
 		return nil, fmt.Errorf("add root namespaces: %w", err)
 	}
 
+	sigID := o.xmldsigConfig.SignatureID
+	if sigID == "" {
+		sigID = fmt.Sprintf(signatureRootIDFormat, o.docID)
+	}
+
 	s := &Signature{
 		doc:           data,
 		opts:          o,
-		ID:            fmt.Sprintf(signatureRootIDFormat, o.docID),
+		ID:            sigID,
 		DSigNamespace: NamespaceDSig,
 	}
 
@@ -225,10 +231,18 @@ func (s *Signature) buildQualifyingProperties() error {
 	if err != nil {
 		return err
 	}
+	var qpID string
+	if !s.opts.xadesConfig.OmitQualifyingPropertiesID {
+		qpID = fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID)
+	}
+	target := s.ID
+	if !s.opts.xadesConfig.TargetRaw {
+		target = "#" + target
+	}
 	qp := &QualifyingProperties{
 		XAdESNamespace:   NamespaceXAdES,
-		ID:               fmt.Sprintf(sigQualifyingPropertiesIDFormat, s.opts.docID),
-		Target:           fmt.Sprintf("#"+signatureRootIDFormat, s.opts.docID),
+		ID:               qpID,
+		Target:           target,
 		SignedProperties: signedPropsElement,
 	}
 
@@ -241,8 +255,12 @@ func (s *Signature) buildQualifyingProperties() error {
 // buildKeyInfo creates KeyInfo element, containing the certificate and public key
 func (s *Signature) buildKeyInfo() {
 	certificate := s.opts.cert
+	var keyInfoID string
+	if !s.opts.xmldsigConfig.OmitKeyInfoID {
+		keyInfoID = fmt.Sprintf(certificateIDFormat, s.opts.docID)
+	}
 	info := &KeyInfo{
-		ID: fmt.Sprintf(certificateIDFormat, s.opts.docID),
+		ID: keyInfoID,
 		X509Data: &X509Data{
 			X509Certificate: []string{
 				certificate.NakedPEM(),
@@ -352,8 +370,12 @@ func (s *Signature) buildSignedInfo() error {
 			docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
 		}
 	}
+	refID := s.opts.xmldsigConfig.SignedDataReferenceID
+	if refID == "" {
+		refID = fmt.Sprintf(signedDataReferenceID, s.opts.docID)
+	}
 	si.Reference = append(si.Reference, &Reference{
-		ID:   fmt.Sprintf(signedDataReferenceID, s.opts.docID),
+		ID:   refID,
 		Type: docRefType,
 		URI:  "",
 		Transforms: &Transforms{
@@ -399,18 +421,43 @@ func (s *Signature) buildSignedInfo() error {
 	// Finally, if enabled, add the XAdES digests
 	if s.opts.xadesConfig != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
-		ns = ns.Add(XAdES, NamespaceXAdES)
-		signedPropsCanonicalizer := s.opts.xadesConfig.SignedPropertiesCanonicalizer
 		spBytes, err := xml.Marshal(sp)
 		if err != nil {
 			return fmt.Errorf("marshal signed properties: %w", err)
 		}
-		canonicalizedSignedProps, err := canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
-		if err != nil {
-			return fmt.Errorf("canonicalize signed properties: %w", err)
+
+		var spDataToHash []byte
+		if s.opts.xadesConfig.RawXMLSignedPropertiesDigest {
+			// ZATCA mode: serialize matching dom4j's asXML() behavior —
+			// xmlns:xades on root, xmlns:ds repeated on each ds:* child,
+			// self-closing empty elements, no C14N.
+			spDataToHash, err = serializeDom4jStyle(spBytes)
+			if err != nil {
+				return fmt.Errorf("dom4j serialize: %w", err)
+			}
+		} else {
+			// Standard mode: canonicalize the SP element before hashing.
+			var spNS Namespaces
+			if s.opts.xadesConfig.MinimalSignedPropertiesNamespaces {
+				spNS = make(Namespaces)
+				spNS[DSig] = NamespaceDSig
+				spNS[XAdES] = NamespaceXAdES
+			} else {
+				spNS = ns.Add(XAdES, NamespaceXAdES)
+			}
+			spDataToHash, err = canonicalizeWith(spBytes, spNS, s.opts.xadesConfig.SignedPropertiesCanonicalizer)
+			if err != nil {
+				return fmt.Errorf("canonicalize signed properties: %w", err)
+			}
 		}
+
 		signedPropsHash := s.opts.xadesConfig.SignedPropertiesHash
-		spDigest, err := digestBytes(canonicalizedSignedProps, signedPropsHash)
+		var spDigest string
+		if s.opts.xadesConfig.HexEncodeDigests {
+			spDigest, err = digestBytesHex(spDataToHash, signedPropsHash)
+		} else {
+			spDigest, err = digestBytes(spDataToHash, signedPropsHash)
+		}
 		if err != nil {
 			return fmt.Errorf("xades digest: %w", err)
 		}
@@ -418,9 +465,13 @@ func (s *Signature) buildSignedInfo() error {
 		if err != nil {
 			return fmt.Errorf("xades digest algorithm: %w", err)
 		}
+		spRefType := "http://uri.etsi.org/01903#SignedProperties"
+		if t := s.opts.xadesConfig.SignedPropertiesReferenceType; t != "" {
+			spRefType = t
+		}
 		spRef := &Reference{
 			URI:  "#" + sp.ID,
-			Type: "http://uri.etsi.org/01903#SignedProperties",
+			Type: spRefType,
 			DigestMethod: &AlgorithmMethod{
 				Algorithm: signedPropsAlgorithm,
 			},
@@ -429,7 +480,7 @@ func (s *Signature) buildSignedInfo() error {
 		if !s.opts.xadesConfig.OmitSignedPropertiesTransforms {
 			spRef.Transforms = &Transforms{
 				Transform: []*AlgorithmMethod{
-					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},
+					{Algorithm: s.opts.xadesConfig.SignedPropertiesCanonicalizer.Algorithm().String()},
 				},
 			}
 		}
@@ -443,25 +494,43 @@ func (s *Signature) buildSignedInfo() error {
 // buildSignatureValue creates SignatureValue element, containing the
 // signed hash of the SignedInfo element.
 func (s *Signature) buildSignatureValue() error {
-	// Take a copy of the signedInfo so that we can
-	// modify the namespaces for canonicalization.
-	data, err := xml.Marshal(s.SignedInfo)
-	if err != nil {
-		return err
-	}
-	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace) // namespace of ds:Signature
-	data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
-	if err != nil {
-		return fmt.Errorf("canonicalize: %w", err)
+	var dataToSign string
+
+	if s.opts.xmldsigConfig.SignDocumentDigest {
+		// ZATCA mode: sign the raw document digest bytes (first Reference
+		// DigestValue). cert.Sign will SHA-256 these again, producing the
+		// double-SHA-256 that Java's SHA256withECDSA expects.
+		digestB64 := s.SignedInfo.Reference[0].DigestValue
+		digestBytes, err := base64.StdEncoding.DecodeString(digestB64)
+		if err != nil {
+			return fmt.Errorf("decode document digest: %w", err)
+		}
+		dataToSign = string(digestBytes)
+	} else {
+		// Standard XML DSig: sign the canonicalized SignedInfo.
+		data, err := xml.Marshal(s.SignedInfo)
+		if err != nil {
+			return err
+		}
+		ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
+		data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
+		if err != nil {
+			return fmt.Errorf("canonicalize: %w", err)
+		}
+		dataToSign = string(data)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormat)
+	signatureValue, err := s.opts.cert.Sign(dataToSign, s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormat)
 	if err != nil {
 		return fmt.Errorf("sign SignedInfo: %w", err)
 	}
 
+	var sigValID string
+	if !s.opts.xmldsigConfig.OmitSignatureValueID {
+		sigValID = fmt.Sprintf(signatureIDFormat+"-SignatureValue", s.opts.docID)
+	}
 	s.Value = &Value{
-		ID:    fmt.Sprintf(signatureIDFormat+"-SignatureValue", s.opts.docID),
+		ID:    sigValID,
 		Value: signatureValue,
 	}
 	return nil

@@ -162,7 +162,7 @@ func signECDSA(privateKey *ecdsa.PrivateKey, digest []byte, hash crypto.Hash) ([
 	return signature, nil
 }
 
-// Fingerprint returns the requested hash of the certificate bytes.
+// Fingerprint returns the requested hash of the certificate's DER bytes.
 func (cert *Certificate) Fingerprint(hash crypto.Hash) (string, error) {
 	if hash == 0 {
 		hash = crypto.SHA512
@@ -175,6 +175,13 @@ func (cert *Certificate) Fingerprint(hash crypto.Hash) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
+}
+
+// FingerprintPEM returns the hash of the certificate's base64 PEM text
+// (without headers), hex-encoded and then base64-encoded: base64(hex(hash)).
+// Required by ZATCA which hashes the PEM text rather than DER bytes.
+func (cert *Certificate) FingerprintPEM(hash crypto.Hash) (string, error) {
+	return digestBytesHex([]byte(cert.NakedPEM()), hash)
 }
 
 // NakedPEM will return the public certificate encoded in base64 PEM

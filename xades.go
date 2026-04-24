@@ -33,7 +33,7 @@ type XAdESPolicyConfig struct {
 // QualifyingProperties contains XAdES-specific signature data. XAdES-specific namespace is required, so we use `xades` prefix.
 type QualifyingProperties struct {
 	XAdESNamespace string `xml:"xmlns:xades,attr,omitempty"`
-	ID             string `xml:"Id,attr"`
+	ID             string `xml:"Id,attr,omitempty"`
 	Target         string `xml:"Target,attr"`
 
 	SignedProperties   *SignedProperties   `xml:"xades:SignedProperties"`
@@ -158,7 +158,13 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 		return nil, errors.New("missing certificate")
 	}
 	certHash := s.opts.xadesConfig.SigningCertificateHash
-	fingerprint, err := cert.Fingerprint(certHash)
+	var fingerprint string
+	var err error
+	if s.opts.xadesConfig.HashPEMText {
+		fingerprint, err = cert.FingerprintPEM(certHash)
+	} else {
+		fingerprint, err = cert.Fingerprint(certHash)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("certificate fingerprint: %w", err)
 	}
@@ -212,12 +218,20 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 		SignaturePolicyIdentifier: buildPolicyIdentifier(s.opts.xadesConfig.Policy),
 	}
 
+	spID := s.opts.xadesConfig.SignedPropertiesID
+	if spID == "" {
+		spID = fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID)
+	}
+	refID := s.opts.xmldsigConfig.SignedDataReferenceID
+	if refID == "" {
+		refID = fmt.Sprintf(signedDataReferenceID, s.opts.docID)
+	}
 	signedProps := &SignedProperties{
-		ID:                        fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
+		ID:                        spID,
 		SignedSignatureProperties: signedSignatureProps,
 		SignedDataObjectProperties: buildSignedDataObjectProperties(
 			s.opts.xadesConfig.DataObjectFormat,
-			fmt.Sprintf(signedDataReferenceID, s.opts.docID),
+			refID,
 		),
 	}
 
