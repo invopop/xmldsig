@@ -111,7 +111,7 @@ func LoadCertificateFromBytes(data []byte, password string) (*Certificate, error
 // digest using the configured private key. For ECDSA keys, ecdsaFormat controls
 // whether the signature is returned in concatenated r||s format (W3C XML DSig
 // standard) or raw DER encoding (required by ZATCA).
-func (cert *Certificate) Sign(data string, hash crypto.Hash, ecdsaFormat ECDSAFormat) (string, error) {
+func (cert *Certificate) Sign(data string, hash crypto.Hash, ecdsaFormatDER bool) (string, error) {
 	if hash == 0 {
 		hash = crypto.SHA256
 	}
@@ -133,7 +133,7 @@ func (cert *Certificate) Sign(data string, hash crypto.Hash, ecdsaFormat ECDSAFo
 	case *rsa.PrivateKey:
 		signature, signingErr = cert.privateKey.Sign(rand.Reader, digest, hash)
 	case *ecdsa.PrivateKey:
-		if ecdsaFormat == ECDSAFormatDER {
+		if ecdsaFormatDER {
 			// Keep the raw DER encoding from privateKey.Sign (required by ZATCA).
 			signature, signingErr = cert.privateKey.Sign(rand.Reader, digest, hash)
 		} else {

@@ -1,7 +1,6 @@
 package xmldsig
 
 import (
-	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -342,16 +341,15 @@ func (s *Signature) buildSignedInfo() error {
 	if err != nil {
 		return fmt.Errorf("document digest algorithm: %w", err)
 	}
-
-	var docRefType string
-	if !s.opts.xmldsigConfig.OmitDocumentReferenceType {
-		docRefType = ReferenceTypeObject
-	}
-	var docTransforms = s.opts.xmldsigConfig.DocumentTransforms
+	docTransforms := s.opts.xmldsigConfig.DocumentTransforms
 	if !s.opts.xmldsigConfig.OmitDataCanonicalizationTransform {
 		if alg := dataCanonicalizer.Algorithm().String(); alg != "" {
 			docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
 		}
+	}
+	var docRefType string
+	if !s.opts.xmldsigConfig.OmitDocumentReferenceType {
+		docRefType = ReferenceTypeObject
 	}
 	si.Reference = append(si.Reference, &Reference{
 		ID:   fmt.Sprintf(signedDataReferenceID, s.opts.docID),
@@ -401,12 +399,13 @@ func (s *Signature) buildSignedInfo() error {
 	if s.opts.xadesConfig != nil {
 		sp := s.Object.QualifyingProperties.SignedProperties
 		ns = ns.Add(XAdES, NamespaceXAdES)
+		signedPropsCanonicalizer := s.opts.xadesConfig.SignedPropertiesCanonicalizer
 		spBytes, err := xml.Marshal(sp)
 		if err != nil {
 			return fmt.Errorf("marshal signed properties: %w", err)
 		}
 
-		spDataToHash, err := canonicalizeWith(spBytes, ns, s.opts.xadesConfig.SignedPropertiesCanonicalizer)
+		spDataToHash, err := canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
 		if err != nil {
 			return fmt.Errorf("canonicalize signed properties: %w", err)
 		}
@@ -430,13 +429,11 @@ func (s *Signature) buildSignedInfo() error {
 				Algorithm: signedPropsAlgorithm,
 			},
 			DigestValue: spDigest,
-		}
-		if !s.opts.xadesConfig.OmitSignedPropertiesTransforms {
-			spRef.Transforms = &Transforms{
+			Transforms: &Transforms{
 				Transform: []*AlgorithmMethod{
 					{Algorithm: s.opts.xadesConfig.SignedPropertiesCanonicalizer.Algorithm().String()},
 				},
-			}
+			},
 		}
 		si.Reference = append(si.Reference, spRef)
 	}
@@ -448,30 +445,17 @@ func (s *Signature) buildSignedInfo() error {
 // buildSignatureValue creates SignatureValue element, containing the
 // signed hash of the SignedInfo element.
 func (s *Signature) buildSignatureValue() error {
-	var dataToSign string
-
-	if s.opts.xmldsigConfig.SignDocumentDigest {
-		digestB64 := s.SignedInfo.Reference[0].DigestValue
-		digestBytes, err := base64.StdEncoding.DecodeString(digestB64)
-		if err != nil {
-			return fmt.Errorf("decode document digest: %w", err)
-		}
-		dataToSign = string(digestBytes)
-	} else {
-		// Standard XML DSig: sign the canonicalized SignedInfo.
-		data, err := xml.Marshal(s.SignedInfo)
-		if err != nil {
-			return err
-		}
-		ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
-		data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
-		if err != nil {
-			return fmt.Errorf("canonicalize: %w", err)
-		}
-		dataToSign = string(data[:])
+	data, err := xml.Marshal(s.SignedInfo)
+	if err != nil {
+		return err
+	}
+	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
+	data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
+	if err != nil {
+		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(dataToSign, s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormat)
+	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormatDER)
 	if err != nil {
 		return fmt.Errorf("sign SignedInfo: %w", err)
 	}

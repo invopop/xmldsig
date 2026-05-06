@@ -18,10 +18,9 @@ func XMLDSigConfig() xmldsig.XMLDSigConfig {
 		DataHash:                          crypto.SHA256,
 		SignedInfoCanonicalizer:           dsig.MakeC14N11Canonicalizer(),
 		SignedInfoHash:                    crypto.SHA256,
-		ECDSAFormat:                       xmldsig.ECDSAFormatDER,
-		OmitDocumentReferenceType:         true,
+		ECDSAFormatDER:                    true,
+		OmitDocumentReferenceType:         false,
 		OmitDataCanonicalizationTransform: true,
-		SignDocumentDigest:                true,
 		DocumentTransforms: []*xmldsig.AlgorithmMethod{
 			{
 				Algorithm: xmldsig.XpathFilterAlgorithm,
@@ -46,14 +45,13 @@ func XMLDSigConfig() xmldsig.XMLDSigConfig {
 // XAdESConfig returns the ZATCA-specific XAdES configuration.
 func XAdESConfig() xmldsig.XAdESConfig {
 	return xmldsig.XAdESConfig{
-		TimestampFormatter:             zatcaTimestampFormatter,
-		SigningCertificateHash:         crypto.SHA256,
-		SignedPropertiesCanonicalizer:  dsig.MakeC14N11Canonicalizer(),
-		SignedPropertiesHash:           crypto.SHA256,
-		OmitSignedPropertiesTransforms: true,
-		IncludeCaChain:                 false,
-		HexEncodeDigests:               true,
-		HashPEMText:                    true,
+		TimestampFormatter:            zatcaTimestampFormatter,
+		SigningCertificateHash:        crypto.SHA256,
+		SignedPropertiesCanonicalizer: dsig.MakeC14N11Canonicalizer(),
+		SignedPropertiesHash:          crypto.SHA256,
+		IncludeCaChain:                false,
+		HexEncodeDigests:              true,
+		HashPEMText:                   true,
 	}
 }
 

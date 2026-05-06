@@ -12,10 +12,9 @@ import (
 type ECDSAFormat string
 
 const (
-	// ECDSAFormatConcatenated encodes the signature as r||s (the W3C XML DSig standard format).
+	// ECDSAFormatConcatenated encodes the signature as r||s.
 	ECDSAFormatConcatenated ECDSAFormat = "concatenated"
 	// ECDSAFormatDER keeps the raw ASN.1 DER encoding produced by the signer.
-	// Required by ZATCA, whose validator expects DER rather than the W3C format.
 	ECDSAFormatDER ECDSAFormat = "der"
 )
 
@@ -29,18 +28,11 @@ type XMLDSigConfig struct {
 	KeyInfoCanonicalizer              dsig.Canonicalizer
 	SignedInfoCanonicalizer           dsig.Canonicalizer
 	SignedInfoHash                    crypto.Hash
-	ECDSAFormat                       ECDSAFormat
+	ECDSAFormatDER                    bool
 	OmitDocumentReferenceType         bool
 	OmitDataCanonicalizationTransform bool
 	DocumentTransforms                []*AlgorithmMethod
 	PreHashTransforms                 func([]byte) ([]byte, error)
-
-	// ID overrides — when set, replace the default UUID-based IDs.
-	// SignatureID           string // root ds:Signature Id (default: "Signature-{docID}-Signature")
-	// SignedDataReferenceID string // document ds:Reference Id (default: "Reference-{docID}")
-	// OmitSignatureValueID bool // suppress Id on ds:SignatureValue
-	// OmitKeyInfoID        bool // suppress Id on ds:KeyInfo
-	SignDocumentDigest bool // sign the first Reference DigestValue (double-SHA-256) instead of canonical SignedInfo
 }
 
 // XAdESConfig configures the XAdES-specific properties.
@@ -53,12 +45,11 @@ type XAdESConfig struct {
 	SignedPropertiesHash          crypto.Hash
 
 	// XAdES-specific optional XML fields
-	OmitSignedPropertiesTransforms bool
-	Role                           XAdESSignerRole
-	Description                    string
-	DataObjectFormat               *DataObjectFormat
-	Policy                         *XAdESPolicyConfig
-	IncludeCaChain                 bool
+	Role             XAdESSignerRole
+	Description      string
+	DataObjectFormat *DataObjectFormat
+	Policy           *XAdESPolicyConfig
+	IncludeCaChain   bool
 
 	// When true, digests in XAdES elements are hex-encoded
 	// before base64: base64(hex(hash)) instead of base64(hash).
@@ -87,9 +78,6 @@ func normalizeXMLDSigConfig(opts XMLDSigConfig) XMLDSigConfig {
 	}
 	if opts.SignedInfoHash == 0 {
 		opts.SignedInfoHash = crypto.SHA256
-	}
-	if opts.ECDSAFormat == "" {
-		opts.ECDSAFormat = ECDSAFormatConcatenated
 	}
 	if len(opts.DocumentTransforms) == 0 {
 		opts.DocumentTransforms = []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
