@@ -60,20 +60,12 @@ type XAdESConfig struct {
 	Policy                         *XAdESPolicyConfig
 	IncludeCaChain                 bool
 
-	// Digest encoding — when true, digests in XAdES elements are hex-encoded
+	// When true, digests in XAdES elements are hex-encoded
 	// before base64: base64(hex(hash)) instead of base64(hash).
 	HexEncodeDigests bool
-	// HashPEMText — when true, the signing certificate digest is computed
+	// When true, the signing certificate digest is computed
 	// over the base64 PEM text instead of the raw DER bytes.
 	HashPEMText bool
-
-	// ID and structure overrides
-	// SignedPropertiesID                string // override xades:SignedProperties Id (default: "Signature-{docID}-SignedProperties")
-	// OmitQualifyingPropertiesID        bool   // suppress Id on xades:QualifyingProperties
-	// TargetRaw                         bool   // use Target without "#" prefix
-	// SignedPropertiesReferenceType     string // override Type on the SP ds:Reference (default: "http://uri.etsi.org/01903#SignedProperties")
-	// MinimalSignedPropertiesNamespaces bool   // only include ds+xades namespaces in SP canonicalization (not all root namespaces)
-	RawXMLSignedPropertiesDigest bool // skip C14N, hash raw XML serialization (required by ZATCA which uses dom4j asXML())
 }
 
 // normalizeXMLDSigConfig fills missing XMLDSig values with defaults.

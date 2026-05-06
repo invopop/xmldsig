@@ -51,10 +51,9 @@ func XAdESConfig() xmldsig.XAdESConfig {
 		SignedPropertiesCanonicalizer:  dsig.MakeC14N11Canonicalizer(),
 		SignedPropertiesHash:           crypto.SHA256,
 		OmitSignedPropertiesTransforms: true,
-		IncludeCaChain:                 true,
+		IncludeCaChain:                 false,
 		HexEncodeDigests:               true,
 		HashPEMText:                    true,
-		RawXMLSignedPropertiesDigest:   true,
 	}
 }
 

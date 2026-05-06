@@ -57,6 +57,20 @@ type PrivateKeyInfo struct {
 	PublicKey string
 }
 
+// NewCertificate creates a Certificate from a parsed x509.Certificate and
+// a crypto.Signer
+func NewCertificate(cert *x509.Certificate, key crypto.Signer) (*Certificate, error) {
+	issuer := &pkix.RDNSequence{}
+	if _, err := asn1.Unmarshal(cert.RawIssuer, issuer); err != nil {
+		return nil, fmt.Errorf("parsing issuer: %w", err)
+	}
+	return &Certificate{
+		privateKey:  key,
+		certificate: cert,
+		issuer:      issuer,
+	}, nil
+}
+
 // LoadCertificate creates a new Certificate instance from a PKCS12 file
 // at the given path with the given password
 func LoadCertificate(path, password string) (*Certificate, error) {
