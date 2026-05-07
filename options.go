@@ -8,16 +8,6 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-// ECDSAFormat controls how ECDSA signature bytes are encoded in the SignatureValue element.
-type ECDSAFormat string
-
-const (
-	// ECDSAFormatConcatenated encodes the signature as r||s.
-	ECDSAFormatConcatenated ECDSAFormat = "concatenated"
-	// ECDSAFormatDER keeps the raw ASN.1 DER encoding produced by the signer.
-	ECDSAFormatDER ECDSAFormat = "der"
-)
-
 // XMLDSigConfig configures canonicalization, hashing, and KeyInfo handling for raw XML DSig signatures.
 type XMLDSigConfig struct {
 	DataCanonicalizer                 dsig.Canonicalizer

@@ -71,42 +71,30 @@ func zatcaPreHashTransforms(xmlData []byte) ([]byte, error) {
 		return xmlData, nil
 	}
 
-	// Insert dummy elements at positions matching the signed invoice layout.
-	// InvoiceTBS removes them, and etree leaves residual newlines that match
-	// ZATCA's XSLT-based element stripping.
+	// Insert residual newlines that match ZATCA's XSLT-based element stripping.
 
 	// 1. ext:UBLExtensions — first child element
 	if invoice.SelectElement("UBLExtensions") == nil {
 		if idx := indexOfFirstChildElement(invoice); idx >= 0 {
-			invoice.InsertChildAt(idx, etree.NewElement("ext:UBLExtensions"))
-			invoice.InsertChildAt(idx+1, &etree.CharData{Data: "\n  "})
+			invoice.InsertChildAt(idx, &etree.CharData{Data: "\n  "})
 		}
 	}
 
 	// 2. QR AdditionalDocumentReference — after the last existing ref
 	if !hasQRRef(invoice) {
 		if idx := indexOfLastChildElementByTag(invoice, "AdditionalDocumentReference"); idx >= 0 {
-			qr := etree.NewElement("cac:AdditionalDocumentReference")
-			qr.CreateElement("cbc:ID").SetText("QR")
 			invoice.InsertChildAt(idx+1, &etree.CharData{Data: "\n  "})
-			invoice.InsertChildAt(idx+2, qr)
 		}
 	}
 
 	// 3. cac:Signature — before AccountingSupplierParty
 	if invoice.SelectElement("Signature") == nil {
 		if idx := indexOfChildElementByTag(invoice, "AccountingSupplierParty"); idx >= 0 {
-			invoice.InsertChildAt(idx, etree.NewElement("cac:Signature"))
-			invoice.InsertChildAt(idx+1, &etree.CharData{Data: "\n  "})
+			invoice.InsertChildAt(idx, &etree.CharData{Data: "\n  "})
 		}
 	}
 
-	data, err := doc.WriteToBytes()
-	if err != nil {
-		return nil, fmt.Errorf("write xml: %w", err)
-	}
-
-	return InvoiceTBS(data)
+	return doc.WriteToBytes()
 }
 
 func hasQRRef(invoice *etree.Element) bool {
@@ -144,37 +132,4 @@ func indexOfLastChildElementByTag(el *etree.Element, tag string) int {
 		}
 	}
 	return last
-}
-
-func InvoiceTBS(xmlData []byte) ([]byte, error) {
-	doc := etree.NewDocument()
-	doc.ReadSettings.PreserveCData = true
-	if err := doc.ReadFromBytes(xmlData); err != nil {
-		return nil, err
-	}
-
-	invoice := doc.Root()
-	if invoice == nil {
-		return xmlData, nil
-	}
-
-	// ext:UBLExtensions — direct child of Invoice
-	if el := invoice.SelectElement("UBLExtensions"); el != nil {
-		invoice.RemoveChild(el)
-	}
-
-	// cac:AdditionalDocumentReference where cbc:ID = "QR" — direct child of Invoice
-	for _, ref := range invoice.SelectElements("AdditionalDocumentReference") {
-		if id := ref.SelectElement("ID"); id != nil && strings.TrimSpace(id.Text()) == "QR" {
-			invoice.RemoveChild(ref)
-			break
-		}
-	}
-
-	// cac:Signature — direct child of Invoice
-	if el := invoice.SelectElement("Signature"); el != nil {
-		invoice.RemoveChild(el)
-	}
-
-	return doc.WriteToBytes()
 }
