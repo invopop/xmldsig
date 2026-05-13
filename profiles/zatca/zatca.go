@@ -2,6 +2,7 @@ package zatca
 
 import (
 	"crypto"
+	"crypto/x509/pkix"
 	"fmt"
 	"strings"
 	"time"
@@ -46,12 +47,14 @@ func XMLDSigConfig() xmldsig.XMLDSigConfig {
 func XAdESConfig() xmldsig.XAdESConfig {
 	return xmldsig.XAdESConfig{
 		TimestampFormatter:            zatcaTimestampFormatter,
+		IssuerSerializer:              zatcaIssuerSerializer,
 		SigningCertificateHash:        crypto.SHA256,
 		SignedPropertiesCanonicalizer: dsig.MakeC14N11Canonicalizer(),
 		SignedPropertiesHash:          crypto.SHA256,
 		IncludeCaChain:                false,
 		HexEncodeDigests:              true,
 		HashPEMText:                   true,
+		Dom4jSignedProperties:         true,
 	}
 }
 
@@ -132,4 +135,36 @@ func indexOfLastChildElementByTag(el *etree.Element, tag string) int {
 		}
 	}
 	return last
+}
+
+// issuerAttrNames extends Go's stdlib pkix attribute-name table with
+// DC (Domain Component), used by the ZATCA PCSID issuer.
+var issuerAttrNames = map[string]string{
+	"2.5.4.3":                    "CN",
+	"2.5.4.5":                    "SERIALNUMBER",
+	"2.5.4.6":                    "C",
+	"2.5.4.7":                    "L",
+	"2.5.4.8":                    "ST",
+	"2.5.4.9":                    "STREET",
+	"2.5.4.10":                   "O",
+	"2.5.4.11":                   "OU",
+	"2.5.4.17":                   "POSTALCODE",
+	"0.9.2342.19200300.100.1.25": "DC",
+}
+
+func zatcaIssuerSerializer(seq pkix.RDNSequence) string {
+	parts := make([]string, 0, len(seq))
+	for i := len(seq) - 1; i >= 0; i-- {
+		rdn := seq[i]
+		attrs := make([]string, 0, len(rdn))
+		for _, atv := range rdn {
+			name, ok := issuerAttrNames[atv.Type.String()]
+			if !ok {
+				name = atv.Type.String()
+			}
+			attrs = append(attrs, fmt.Sprintf("%s=%v", name, atv.Value))
+		}
+		parts = append(parts, strings.Join(attrs, "+"))
+	}
+	return strings.Join(parts, ", ")
 }

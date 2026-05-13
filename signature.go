@@ -133,10 +133,10 @@ type NamedCurve struct {
 const (
 	signatureIDFormat               = "Signature-%s"
 	signatureRootIDFormat           = "Signature-%s-Signature"
-	sigPropertiesIDFormat           = "Signature-%s-SignedProperties"
 	sigQualifyingPropertiesIDFormat = "Signature-%s-QualifyingProperties"
 	signedDataReferenceID           = "Reference-%s"
 	certificateIDFormat             = "Certificate-%s"
+	sigPropertiesIDFormat           = "xadesSignedProperties"
 )
 
 func newSignature(data []byte, opts ...Option) (*Signature, error) {
@@ -405,9 +405,17 @@ func (s *Signature) buildSignedInfo() error {
 			return fmt.Errorf("marshal signed properties: %w", err)
 		}
 
-		spDataToHash, err := canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
-		if err != nil {
-			return fmt.Errorf("canonicalize signed properties: %w", err)
+		var spDataToHash []byte
+		if s.opts.xadesConfig.Dom4jSignedProperties {
+			spDataToHash, err = SerializeDom4jSignedProperties(spBytes)
+			if err != nil {
+				return fmt.Errorf("dom4j signed properties: %w", err)
+			}
+		} else {
+			spDataToHash, err = canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
+			if err != nil {
+				return fmt.Errorf("canonicalize signed properties: %w", err)
+			}
 		}
 
 		signedPropsHash := s.opts.xadesConfig.SignedPropertiesHash

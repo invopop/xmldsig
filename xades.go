@@ -216,7 +216,7 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 	}
 
 	signedProps := &SignedProperties{
-		ID:                        fmt.Sprintf(sigPropertiesIDFormat, s.opts.docID),
+		ID:                        sigPropertiesIDFormat,
 		SignedSignatureProperties: signedSignatureProps,
 		SignedDataObjectProperties: buildSignedDataObjectProperties(
 			s.opts.xadesConfig.DataObjectFormat,

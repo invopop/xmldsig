@@ -47,6 +47,10 @@ type XAdESConfig struct {
 	// When true, the signing certificate digest is computed
 	// over the base64 PEM text instead of the raw DER bytes.
 	HashPEMText bool
+	// When true, <xades:SignedProperties> is serialized via the dom4j
+	// asXML() equivalent (xmlns:xades on the root, xmlns:ds redeclared on
+	// each ds:* descendant).
+	Dom4jSignedProperties bool
 }
 
 // normalizeXMLDSigConfig fills missing XMLDSig values with defaults.
