@@ -1,6 +1,8 @@
 package xmldsig_test
 
 import (
+	"crypto/sha512"
+	"encoding/base64"
 	"encoding/xml"
 	"os"
 	"testing"
@@ -196,6 +198,47 @@ func TestSignature(t *testing.T) {
 			pid.SigPolicyQualifiers.SigPolicyQualifier[0].SPURI)
 	})
 
+	t.Run("should use dom4j signed properties serialization when flag is set", func(t *testing.T) {
+		xadesCfg := facturae.XAdESConfig(xadesConfig())
+		xadesCfg.Dom4jSignedProperties = true
+
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXMLDSigConfig(facturae.XMLDSigConfig()),
+			xmldsig.WithXAdESConfig(xadesCfg),
+		)
+		require.NoError(t, err)
+
+		spRef := findSignedPropertiesReference(signature)
+		require.NotNil(t, spRef)
+
+		spBytes, err := xml.Marshal(signature.Object.QualifyingProperties.SignedProperties)
+		require.NoError(t, err)
+		dom4j, err := xmldsig.SerializeDom4jSignedProperties(spBytes)
+		require.NoError(t, err)
+
+		// facturae's SignedPropertiesHash defaults to SHA-512 and digests are
+		// base64-encoded (HexEncodeDigests is false).
+		want := sha512.Sum512(dom4j)
+		assert.Equal(t,
+			base64.StdEncoding.EncodeToString(want[:]),
+			spRef.DigestValue,
+			"DigestValue should match base64(sha512(SerializeDom4jSignedProperties(spBytes)))",
+		)
+
+		// Sanity check: without the flag the digest differs.
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
+		baseline, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmlOpt,
+			xadesOpt,
+		)
+		require.NoError(t, err)
+		baselineSP := findSignedPropertiesReference(baseline)
+		require.NotNil(t, baselineSP)
+		assert.NotEqual(t, baselineSP.DigestValue, spRef.DigestValue)
+	})
+
 	t.Run("should not include policy qualifiers when only URL provided", func(t *testing.T) {
 		cfg := xmldsig.XAdESConfig{
 			Policy: &xmldsig.XAdESPolicyConfig{
@@ -239,6 +282,18 @@ func facturaeOptions(cfg xmldsig.XAdESConfig) (xmldsig.Option, xmldsig.Option) {
 
 func getCertificate() (*xmldsig.Certificate, error) {
 	return xmldsig.LoadCertificate(testCertificateFile, testCertificatePass)
+}
+
+func findSignedPropertiesReference(sig *xmldsig.Signature) *xmldsig.Reference {
+	if sig == nil || sig.SignedInfo == nil {
+		return nil
+	}
+	for _, r := range sig.SignedInfo.Reference {
+		if r.Type == "http://uri.etsi.org/01903#SignedProperties" {
+			return r
+		}
+	}
+	return nil
 }
 
 func getTimestamp(signature *xmldsig.Signature) string {
