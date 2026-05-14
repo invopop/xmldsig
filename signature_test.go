@@ -89,7 +89,7 @@ func TestSignature(t *testing.T) {
 		assert.Nil(t, err)
 		// This is mostly useful for getting back fixed results, so
 		// we can safely compare the final signature here.
-		assert.Contains(t, signature.Value.Value, "StAMqTR9wMvkBrpsG2myUAIew2cLTJbhPCCosqtsU6Srp6PVEdTyNylPgn/Kx1xcDbvA4jPfmkTSxxcvfXRkL+Q5ogCJEoLu7bbiCbjKmoyCyD54o4VONDMYK3fpQ2muw3m4fm3C8eOk+9BhmyGDbaQe5gefRLLBSA/7oGTWdooXuiHGg396dg7sGpzSEfslylBuF8yZZd1cMsvmBFUUPL14BS6x0j/H8RscissjRVUb1LZGEu0JMwVNjfAyEZDY/r4Sco2e0bLi2J5xrFDLt8aacwFwRLb4WC6MdWIf4c8Lzoi7nVB+xvMG46r8PBgPFAlfNF5Qj3+mzlY9hLQvWg==")
+		assert.Contains(t, signature.Value.Value, "TeFqLLA7swOs10oCartohVMMQv+KxJCQbRvgQB1sRWtB4yNkedeNPYL8C6EGSoTPKcVmPmJ486D5HrwEeP0OuJ2bGqdk2mrse6ooVt7oJ9jh/D3YypUUIA9bCCKaMZISvLrOcz9eLcUf+VNP++B4xlweBtgqBkKEMzPp6EEoFzLB6cNYVU3/WjALy3hscJ0lJ/oPL3DDxyguJ4nvOeGZcLTScalWOF5rDOC5LbsleENn39UdHPEzVfRk2sIICHdAxU+YXaMKXTRjWlS/XjvE0+h7VRLW0wCbFE6i38FNuuuKTosic92lYvNnl80ffP0ASrc//W4h7FAL9MlSORiHTw==")
 	})
 
 	t.Run("should not set a signer role when not provided", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestSignature(t *testing.T) {
 			t.Fatalf("SignedProperties element missing")
 		}
 
-		assert.Equal(t, "Signature-test-SignedProperties", sp.ID)
+		assert.Equal(t, "xadesSignedProperties", sp.ID)
 		assert.Equal(t, "2024-03-15T10:11:12+00:00", sp.SignedSignatureProperties.SigningTime)
 	})
 
