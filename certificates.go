@@ -190,12 +190,6 @@ func (cert *Certificate) Fingerprint(hash crypto.Hash) (string, error) {
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
 
-// FingerprintPEM returns the hash of the certificate's base64 PEM text
-// (without headers), hex-encoded and then base64-encoded: base64(hex(hash)).
-func (cert *Certificate) FingerprintPEM(hash crypto.Hash) (string, error) {
-	return digestBytesHex([]byte(cert.NakedPEM()), hash)
-}
-
 // NakedPEM will return the public certificate encoded in base64 PEM
 // (without markers like "-----BEGIN CERTIFICATE-----")
 func (cert *Certificate) NakedPEM() string {

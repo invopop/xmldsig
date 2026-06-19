@@ -1,6 +1,8 @@
 package xmldsig
 
 import (
+	"crypto"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/xml"
@@ -158,10 +160,7 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 		return nil, errors.New("missing certificate")
 	}
 	certHash := s.opts.xadesConfig.SigningCertificateHash
-	fingerprint, err := cert.Fingerprint(certHash)
-	if s.opts.xadesConfig.HashPEMText {
-		fingerprint, err = cert.FingerprintPEM(certHash)
-	}
+	fingerprint, err := s.certificateDigest(cert.certificate, certHash)
 	if err != nil {
 		return nil, fmt.Errorf("certificate fingerprint: %w", err)
 	}
@@ -187,7 +186,7 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 
 	if s.opts.xadesConfig.IncludeCaChain {
 		for _, ca := range cert.CaChain {
-			caFingerprint, err := digestBytes(ca.Raw, certHash)
+			caFingerprint, err := s.certificateDigest(ca, certHash)
 			if err != nil {
 				return nil, fmt.Errorf("CA certificate fingerprint: %w", err)
 			}
@@ -225,6 +224,27 @@ func (s *Signature) buildSignedPropertiesElement() (*SignedProperties, error) {
 	}
 
 	return signedProps, nil
+}
+
+// certificateDigest computes a certificate digest for XAdES, honoring the two
+// independent XAdES config knobs:
+//   - HashPEMText selects WHAT bytes are hashed: the naked base64 PEM text
+//     (true) or the raw DER bytes (false).
+//   - HexEncodeDigests selects the OUTPUT encoding: base64(hex(hash)) (true)
+//     or base64(hash) (false).
+//
+// Applying both consistently here keeps the signing certificate and CA chain
+// digests in sync regardless of the flag combination.
+func (s *Signature) certificateDigest(c *x509.Certificate, hash crypto.Hash) (string, error) {
+	cfg := s.opts.xadesConfig
+	data := c.Raw
+	if cfg.HashPEMText {
+		data = []byte(NakedPEM(c))
+	}
+	if cfg.HexEncodeDigests {
+		return digestBytesHex(data, hash)
+	}
+	return digestBytes(data, hash)
 }
 
 func (s *Signature) serializeIssuer(cert *Certificate) string {

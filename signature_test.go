@@ -3,6 +3,7 @@ package xmldsig_test
 import (
 	"crypto/sha512"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/xml"
 	"os"
 	"testing"
@@ -260,6 +261,65 @@ func TestSignature(t *testing.T) {
 		assert.Nil(t, pid.SigPolicyQualifiers)
 	})
 
+}
+
+// TestSigningCertificateDigestEncoding locks in that HashPEMText (what bytes
+// are hashed: naked PEM text vs raw DER) and HexEncodeDigests (output encoding:
+// base64(hex(hash)) vs base64(hash)) are independent and applied consistently
+// to the signing certificate digest for every flag combination.
+func TestSigningCertificateDigestEncoding(t *testing.T) {
+	doc := &SampleDoc{
+		TestNamespace: "http://invopop.com/xml/test",
+		Title:         "This is a test",
+	}
+	data, err := xml.Marshal(doc)
+	require.NoError(t, err)
+
+	certificate, err := getCertificate()
+	require.NoError(t, err)
+
+	// The default SigningCertificateHash is SHA-512, so we mirror that here.
+	naked := []byte(certificate.NakedPEM())
+	der, err := base64.StdEncoding.DecodeString(certificate.NakedPEM())
+	require.NoError(t, err)
+
+	digest := func(input []byte, hexEncode bool) string {
+		sum := sha512.Sum512(input)
+		if hexEncode {
+			return base64.StdEncoding.EncodeToString([]byte(hex.EncodeToString(sum[:])))
+		}
+		return base64.StdEncoding.EncodeToString(sum[:])
+	}
+
+	cases := []struct {
+		name        string
+		hashPEMText bool
+		hexEncode   bool
+		want        string
+	}{
+		{"DER + base64", false, false, digest(der, false)},
+		{"DER + base64(hex)", false, true, digest(der, true)},
+		{"PEM text + base64", true, false, digest(naked, false)},
+		{"PEM text + base64(hex)", true, true, digest(naked, true)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := xmldsig.XAdESConfig{
+				HashPEMText:      tc.hashPEMText,
+				HexEncodeDigests: tc.hexEncode,
+			}
+			signature, err := xmldsig.Sign(data,
+				xmldsig.WithCertificate(certificate),
+				xmldsig.WithXAdESConfig(cfg),
+			)
+			require.NoError(t, err)
+
+			got := signature.Object.QualifyingProperties.SignedProperties.
+				SignedSignatureProperties.SigningCertificate.Cert[0].CertDigest.DigestValue
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func xadesConfig() xmldsig.XAdESConfig {
