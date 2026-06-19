@@ -16,6 +16,22 @@ import (
 //
 // It's the byte form ZATCA's fatoora validator (and any other validator
 // hashing SP via dom4j) digests.
+//
+// Why this exists instead of standard canonicalization: ZATCA does NOT
+// canonicalize SignedProperties before hashing it; it hashes dom4j's asXML()
+// output directly. That output differs from C14N in three independent ways,
+// none of which is a configurable option in a C14N canonicalizer:
+//
+//  1. Namespaces: dom4j redeclares xmlns:ds on every ds:* element, whereas
+//     C14N declares it once on the nearest ancestor and lets it inherit.
+//  2. Empty elements: dom4j keeps them self-closing (<ds:DigestMethod/>),
+//     whereas canonical XML mandates expanded start+end tags
+//     (<ds:DigestMethod></ds:DigestMethod>).
+//  3. Root declarations: C14N hoists xmlns:ds onto the root and sorts the
+//     namespace declarations; dom4j leaves only xmlns:xades there.
+//
+// Because no canonicalizer can reproduce these bytes, we must replicate dom4j's
+// serialization here to match the digest the validator computes.
 func SerializeDom4jSignedProperties(spBytes []byte) ([]byte, error) {
 	doc := etree.NewDocument()
 	doc.ReadSettings.PreserveCData = true

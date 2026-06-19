@@ -10,14 +10,15 @@ import (
 
 // XMLDSigConfig configures canonicalization, hashing, and KeyInfo handling for raw XML DSig signatures.
 type XMLDSigConfig struct {
-	DataCanonicalizer                 dsig.Canonicalizer
-	DataHash                          crypto.Hash
-	IncludeKeyValue                   bool
-	ReferenceKeyInfoInSignedInfo      bool
-	KeyInfoHash                       crypto.Hash
-	KeyInfoCanonicalizer              dsig.Canonicalizer
-	SignedInfoCanonicalizer           dsig.Canonicalizer
-	SignedInfoHash                    crypto.Hash
+	DataCanonicalizer            dsig.Canonicalizer
+	DataHash                     crypto.Hash
+	IncludeKeyValue              bool
+	ReferenceKeyInfoInSignedInfo bool
+	KeyInfoHash                  crypto.Hash
+	KeyInfoCanonicalizer         dsig.Canonicalizer
+	SignedInfoCanonicalizer      dsig.Canonicalizer
+	SignedInfoHash               crypto.Hash
+	// ECDSAFormatDER returns ECDSA signatures as raw DER (ZATCA) instead of the W3C-standard r||s form.
 	ECDSAFormatDER                    bool
 	OmitDocumentReferenceType         bool
 	OmitDataCanonicalizationTransform bool
