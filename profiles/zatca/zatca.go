@@ -54,7 +54,7 @@ func XAdESConfig() xmldsig.XAdESConfig {
 		IncludeCaChain:                false,
 		HexEncodeDigests:              true,
 		HashPEMText:                   true,
-		Dom4jSignedProperties:         true,
+		SignedPropertiesSerializer:    serializeDom4jSignedProperties,
 	}
 }
 

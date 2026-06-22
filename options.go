@@ -48,10 +48,10 @@ type XAdESConfig struct {
 	// When true, the signing certificate digest is computed
 	// over the base64 PEM text instead of the raw DER bytes.
 	HashPEMText bool
-	// When true, <xades:SignedProperties> is serialized via the dom4j
-	// asXML() equivalent (xmlns:xades on the root, xmlns:ds redeclared on
-	// each ds:* descendant).
-	Dom4jSignedProperties bool
+	// SignedPropertiesSerializer, when set, produces the exact bytes of
+	// <xades:SignedProperties> that are hashed, replacing the default
+	// canonicalization.
+	SignedPropertiesSerializer func([]byte) ([]byte, error)
 }
 
 // normalizeXMLDSigConfig fills missing XMLDSig values with defaults.

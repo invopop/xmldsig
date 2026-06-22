@@ -1,21 +1,23 @@
-package xmldsig
+package zatca
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/beevik/etree"
+	"github.com/invopop/xmldsig"
 )
 
-// SerializeDom4jSignedProperties produces a byte sequence equivalent to
+// serializeDom4jSignedProperties produces a byte sequence equivalent to
 // dom4j's asXML() output of an <xades:SignedProperties> element:
 //   - xmlns:xades declared on the root element
 //   - xmlns:ds declared on each ds:* descendant element individually
 //   - self-closing for empty elements (etree default)
 //   - original whitespace preserved
 //
-// It's the byte form ZATCA's fatoora validator (and any other validator
-// hashing SP via dom4j) digests.
+// It's the byte form ZATCA's fatoora validator digests. This lives in the
+// ZATCA profile (rather than the core library) because it is a ZATCA-specific
+// deviation, injected into signing via XAdESConfig.SignedPropertiesSerializer.
 //
 // Why this exists instead of standard canonicalization: ZATCA does NOT
 // canonicalize SignedProperties before hashing it; it hashes dom4j's asXML()
@@ -32,7 +34,7 @@ import (
 //
 // Because no canonicalizer can reproduce these bytes, we must replicate dom4j's
 // serialization here to match the digest the validator computes.
-func SerializeDom4jSignedProperties(spBytes []byte) ([]byte, error) {
+func serializeDom4jSignedProperties(spBytes []byte) ([]byte, error) {
 	doc := etree.NewDocument()
 	doc.ReadSettings.PreserveCData = true
 	if err := doc.ReadFromBytes(spBytes); err != nil {
@@ -54,7 +56,7 @@ func serializeDom4jStyle(sp *etree.Element) (string, error) {
 
 	filtered := make([]etree.Attr, 0, len(spCopy.Attr))
 	for _, a := range spCopy.Attr {
-		if a.Space == XMLNS || (a.Space == "" && a.Key == XMLNS) {
+		if a.Space == xmldsig.XMLNS || (a.Space == "" && a.Key == xmldsig.XMLNS) {
 			continue
 		}
 		filtered = append(filtered, a)
@@ -62,9 +64,9 @@ func serializeDom4jStyle(sp *etree.Element) (string, error) {
 	spCopy.Attr = filtered
 
 	spCopy.Attr = append([]etree.Attr{{
-		Space: XMLNS,
-		Key:   XAdES,
-		Value: NamespaceXAdES,
+		Space: xmldsig.XMLNS,
+		Key:   xmldsig.XAdES,
+		Value: xmldsig.NamespaceXAdES,
 	}}, spCopy.Attr...)
 
 	addDsNamespace(spCopy)
@@ -91,19 +93,19 @@ func serializeDom4jStyle(sp *etree.Element) (string, error) {
 
 func addDsNamespace(el *etree.Element) {
 	for _, child := range el.ChildElements() {
-		if child.Space == DSig {
+		if child.Space == xmldsig.DSig {
 			found := false
 			for _, a := range child.Attr {
-				if a.Space == XMLNS && a.Key == DSig {
+				if a.Space == xmldsig.XMLNS && a.Key == xmldsig.DSig {
 					found = true
 					break
 				}
 			}
 			if !found {
 				child.Attr = append([]etree.Attr{{
-					Space: XMLNS,
-					Key:   DSig,
-					Value: NamespaceDSig,
+					Space: xmldsig.XMLNS,
+					Key:   xmldsig.DSig,
+					Value: xmldsig.NamespaceDSig,
 				}}, child.Attr...)
 			}
 		}

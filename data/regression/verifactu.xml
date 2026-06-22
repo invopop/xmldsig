@@ -1,0 +1,78 @@
+<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Id="Signature-test-Signature">
+  <ds:SignedInfo>
+    <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"></ds:CanonicalizationMethod>
+    <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"></ds:SignatureMethod>
+    <ds:Reference Id="Reference-test" URI="">
+      <ds:Transforms>
+        <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"></ds:Transform>
+      </ds:Transforms>
+      <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></ds:DigestMethod>
+      <ds:DigestValue>S76bz5spf+GGxoO8RBci7kpyzpAFdYHnCvkLcsSbUkw=</ds:DigestValue>
+    </ds:Reference>
+    <ds:Reference Type="http://uri.etsi.org/01903#SignedProperties" URI="#xadesSignedProperties">
+      <ds:Transforms>
+        <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"></ds:Transform>
+      </ds:Transforms>
+      <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></ds:DigestMethod>
+      <ds:DigestValue>AxEeN0MvYjwmZq9M/Ua0oW0/Qrdm0EBH+ATuzSjMz1o=</ds:DigestValue>
+    </ds:Reference>
+  </ds:SignedInfo>
+  <ds:SignatureValue Id="Signature-test-SignatureValue">SIGNATURE_VALUE</ds:SignatureValue>
+  <ds:KeyInfo Id="Certificate-test">
+    <ds:X509Data>
+      <ds:X509Certificate>MIIDfTCCAmWgAwIBAgIUAwzVZ4xD3js3PheaA9/sNFNzQacwDQYJKoZIhvcNAQELBQAwTjELMAkGA1UEBhMCUEwxDDAKBgNVBAMMA0EgUjEZMBcGA1UEBRMQVElOUEwtMTE5MjE1NDg4NTEKMAgGA1UEKgwBQTEKMAgGA1UEBAwBUjAeFw0yNjAxMjExNTU3MjdaFw0yODAxMjExNTU3MjdaME4xCzAJBgNVBAYTAlBMMQwwCgYDVQQDDANBIFIxGTAXBgNVBAUTEFRJTlBMLTExOTIxNTQ4ODUxCjAIBgNVBCoMAUExCjAIBgNVBAQMAVIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDdz+F7/N6m3n4ign4L/zsBnhzHbJm3x6Avpf7pUnDnAiuQslm+XGzojwnFhY1G/qU/hjO+pSjY+v7DHgm/iUnxQcqFvpDF/kAv/wkVl9MPoKxzzQq0lerduylGNn3+5v6ee/ypGOduRiQfJt2fpyfxyigYbs7KSFxMa9Q4Czkn1AU54Y5Z7u0Md2cp+ZGYVFajmwQW4buIVwZZf470o+31e5ohaw79aik2OXKByUr8kSVWUsXPFNXyRGjjg/h232tSP9CGK0Rh44d+dV1D1qQnXiISMsPfMFWKNS6TV8s6oUV6LZPF6Uax0Tf2xSOzAkxQereQeMrKM7iIKX5vVuxZAgMBAAGjUzBRMB0GA1UdDgQWBBT7F6wwVCOXXeEf7gAhQWhPHjo/rjAfBgNVHSMEGDAWgBT7F6wwVCOXXeEf7gAhQWhPHjo/rjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQB4F53r3Af2gUNC2QyZgrfqZ79m0GDNUMBpJCBH2NtiIZMyJ+7VS+c6XeUe0fxEzN/X3D0UoRK8golmloTBD4n+a5o5J0hoUPTKoX6beVNYspAEqGnI4O0KlYFSbr90l5dT51gh5spfStPTXkSQpngDJ3uQkv3XMlIaqzJF4MK5NKiw8gLR7s2IVnhFDk54+Qscrw43fQiQ8OlYK/fHe1aEGIVxtXTXsJPMRXymlT5SXpX4N/dRyiLkqJJ7X4/01RF4wNNUxXD2fJFFkH9PCUXwIUr9zremGLkwm5kXbnmfenAYTnNJ573FoKZ5c8CreKmNOxeRRX1TiCjUvO1lJT7t</ds:X509Certificate>
+    </ds:X509Data>
+    <ds:KeyValue>
+      <ds:RSAKeyValue>
+        <ds:Modulus>3c/he/zept5+IoJ+C/87AZ4cx2yZt8egL6X+6VJw5wIrkLJZvlxs6I8JxYWNRv6lP4YzvqUo2Pr+wx4Jv4lJ8UHKhb6Qxf5AL/8JFZfTD6Csc80KtJXq3bspRjZ9/ub+nnv8qRjnbkYkHybdn6cn8cooGG7OykhcTGvUOAs5J9QFOeGOWe7tDHdnKfmRmFRWo5sEFuG7iFcGWX+O9KPt9XuaIWsO/WopNjlygclK/JElVlLFzxTV8kRo44P4dt9rUj/QhitEYeOHfnVdQ9akJ14iEjLD3zBVijUuk1fLOqFFei2TxelGsdE39sUjswJMUHq3kHjKyjO4iCl+b1bsWQ==</ds:Modulus>
+        <ds:Exponent>AQAB</ds:Exponent>
+      </ds:RSAKeyValue>
+    </ds:KeyValue>
+  </ds:KeyInfo>
+  <ds:Object>
+    <xades:QualifyingProperties xmlns:xades="http://uri.etsi.org/01903/v1.3.2#" Id="Signature-test-QualifyingProperties" Target="#Signature-test-Signature">
+      <xades:SignedProperties Id="xadesSignedProperties">
+        <xades:SignedSignatureProperties>
+          <xades:SigningTime>2024-03-15T10:11:12+00:00</xades:SigningTime>
+          <xades:SigningCertificate>
+            <xades:Cert>
+              <xades:CertDigest>
+                <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></ds:DigestMethod>
+                <ds:DigestValue>OYRb+DhOnolQR6djG0vBUfLQiRWUeKYvw90Rd8EHc4Y=</ds:DigestValue>
+              </xades:CertDigest>
+              <xades:IssuerSerial>
+                <ds:X509IssuerName>SERIALNUMBER=TINPL-1192154885,CN=A R,C=PL,2.5.4.4=#130152,2.5.4.42=#130141</ds:X509IssuerName>
+                <ds:X509SerialNumber>17413171407285454525495722937415873459217711527</ds:X509SerialNumber>
+              </xades:IssuerSerial>
+            </xades:Cert>
+          </xades:SigningCertificate>
+          <xades:SignaturePolicyIdentifier>
+            <xades:SignaturePolicyId>
+              <xades:SigPolicyId>
+                <xades:Identifier>urn:oid:2.16.724.1.3.1.1.2.1.9</xades:Identifier>
+              </xades:SigPolicyId>
+              <xades:SigPolicyHash>
+                <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"></ds:DigestMethod>
+                <ds:DigestValue>G7roucf600+f03r/o0bAOQ6WAs0=</ds:DigestValue>
+              </xades:SigPolicyHash>
+              <xades:SigPolicyQualifiers>
+                <xades:SigPolicyQualifier>
+                  <xades:SPURI>https://sede.administracion.gob.es/politica_de_firma_anexo_1.pdf</xades:SPURI>
+                </xades:SigPolicyQualifier>
+              </xades:SigPolicyQualifiers>
+            </xades:SignaturePolicyId>
+          </xades:SignaturePolicyIdentifier>
+        </xades:SignedSignatureProperties>
+        <xades:SignedDataObjectProperties>
+          <xades:DataObjectFormat ObjectReference="#Reference-test">
+            <xades:ObjectIdentifier>
+              <xades:Identifier>urn:oid:1.2.840.10003.5.109.10</xades:Identifier>
+            </xades:ObjectIdentifier>
+            <xades:MimeType>text/xml</xades:MimeType>
+            <xades:Encoding>UTF-8</xades:Encoding>
+          </xades:DataObjectFormat>
+        </xades:SignedDataObjectProperties>
+      </xades:SignedProperties>
+    </xades:QualifyingProperties>
+  </ds:Object>
+</ds:Signature>

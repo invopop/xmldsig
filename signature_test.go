@@ -199,9 +199,18 @@ func TestSignature(t *testing.T) {
 			pid.SigPolicyQualifiers.SigPolicyQualifier[0].SPURI)
 	})
 
-	t.Run("should use dom4j signed properties serialization when flag is set", func(t *testing.T) {
+	t.Run("should hash the bytes from the injected SignedPropertiesSerializer", func(t *testing.T) {
+		// A profile injects a custom serializer; the signed-properties digest
+		// must be computed over exactly the bytes it returns rather than the
+		// default canonicalized form.
+		var captured []byte
+		serializer := func(spBytes []byte) ([]byte, error) {
+			captured = append([]byte("PREFIX:"), spBytes...)
+			return captured, nil
+		}
+
 		xadesCfg := facturae.XAdESConfig(xadesConfig())
-		xadesCfg.Dom4jSignedProperties = true
+		xadesCfg.SignedPropertiesSerializer = serializer
 
 		signature, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),
@@ -212,22 +221,19 @@ func TestSignature(t *testing.T) {
 
 		spRef := findSignedPropertiesReference(signature)
 		require.NotNil(t, spRef)
-
-		spBytes, err := xml.Marshal(signature.Object.QualifyingProperties.SignedProperties)
-		require.NoError(t, err)
-		dom4j, err := xmldsig.SerializeDom4jSignedProperties(spBytes)
-		require.NoError(t, err)
+		require.NotEmpty(t, captured, "serializer should have been invoked")
 
 		// facturae's SignedPropertiesHash defaults to SHA-512 and digests are
 		// base64-encoded (HexEncodeDigests is false).
-		want := sha512.Sum512(dom4j)
+		want := sha512.Sum512(captured)
 		assert.Equal(t,
 			base64.StdEncoding.EncodeToString(want[:]),
 			spRef.DigestValue,
-			"DigestValue should match base64(sha512(SerializeDom4jSignedProperties(spBytes)))",
+			"DigestValue should match base64(sha512(serializer(spBytes)))",
 		)
 
-		// Sanity check: without the flag the digest differs.
+		// Sanity check: without the serializer (default canonicalization) the
+		// digest differs.
 		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
 		baseline, err := xmldsig.Sign(data,
 			xmldsig.WithCertificate(certificate),

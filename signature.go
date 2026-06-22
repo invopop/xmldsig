@@ -406,10 +406,10 @@ func (s *Signature) buildSignedInfo() error {
 		}
 
 		var spDataToHash []byte
-		if s.opts.xadesConfig.Dom4jSignedProperties {
-			spDataToHash, err = SerializeDom4jSignedProperties(spBytes)
+		if serializer := s.opts.xadesConfig.SignedPropertiesSerializer; serializer != nil {
+			spDataToHash, err = serializer(spBytes)
 			if err != nil {
-				return fmt.Errorf("dom4j signed properties: %w", err)
+				return fmt.Errorf("serialize signed properties: %w", err)
 			}
 		} else {
 			spDataToHash, err = canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
