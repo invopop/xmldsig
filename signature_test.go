@@ -1,6 +1,9 @@
 package xmldsig_test
 
 import (
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/xml"
 	"os"
 	"testing"
@@ -87,7 +90,7 @@ func TestSignature(t *testing.T) {
 		assert.Nil(t, err)
 		// This is mostly useful for getting back fixed results, so
 		// we can safely compare the final signature here.
-		assert.Contains(t, signature.Value.Value, "StAMqTR9wMvkBrpsG2myUAIew2cLTJbhPCCosqtsU6Srp6PVEdTyNylPgn/Kx1xcDbvA4jPfmkTSxxcvfXRkL+Q5ogCJEoLu7bbiCbjKmoyCyD54o4VONDMYK3fpQ2muw3m4fm3C8eOk+9BhmyGDbaQe5gefRLLBSA/7oGTWdooXuiHGg396dg7sGpzSEfslylBuF8yZZd1cMsvmBFUUPL14BS6x0j/H8RscissjRVUb1LZGEu0JMwVNjfAyEZDY/r4Sco2e0bLi2J5xrFDLt8aacwFwRLb4WC6MdWIf4c8Lzoi7nVB+xvMG46r8PBgPFAlfNF5Qj3+mzlY9hLQvWg==")
+		assert.Contains(t, signature.Value.Value, "TeFqLLA7swOs10oCartohVMMQv+KxJCQbRvgQB1sRWtB4yNkedeNPYL8C6EGSoTPKcVmPmJ486D5HrwEeP0OuJ2bGqdk2mrse6ooVt7oJ9jh/D3YypUUIA9bCCKaMZISvLrOcz9eLcUf+VNP++B4xlweBtgqBkKEMzPp6EEoFzLB6cNYVU3/WjALy3hscJ0lJ/oPL3DDxyguJ4nvOeGZcLTScalWOF5rDOC5LbsleENn39UdHPEzVfRk2sIICHdAxU+YXaMKXTRjWlS/XjvE0+h7VRLW0wCbFE6i38FNuuuKTosic92lYvNnl80ffP0ASrc//W4h7FAL9MlSORiHTw==")
 	})
 
 	t.Run("should not set a signer role when not provided", func(t *testing.T) {
@@ -146,7 +149,7 @@ func TestSignature(t *testing.T) {
 			t.Fatalf("SignedProperties element missing")
 		}
 
-		assert.Equal(t, "Signature-test-SignedProperties", sp.ID)
+		assert.Equal(t, "xadesSignedProperties", sp.ID)
 		assert.Equal(t, "2024-03-15T10:11:12+00:00", sp.SignedSignatureProperties.SigningTime)
 	})
 
@@ -196,6 +199,53 @@ func TestSignature(t *testing.T) {
 			pid.SigPolicyQualifiers.SigPolicyQualifier[0].SPURI)
 	})
 
+	t.Run("should hash the bytes from the injected SignedPropertiesSerializer", func(t *testing.T) {
+		// A profile injects a custom serializer; the signed-properties digest
+		// must be computed over exactly the bytes it returns rather than the
+		// default canonicalized form.
+		var captured []byte
+		serializer := func(spBytes []byte) ([]byte, error) {
+			captured = append([]byte("PREFIX:"), spBytes...)
+			return captured, nil
+		}
+
+		xadesCfg := facturae.XAdESConfig(xadesConfig())
+		xadesCfg.SignedPropertiesSerializer = serializer
+
+		signature, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXMLDSigConfig(facturae.XMLDSigConfig()),
+			xmldsig.WithXAdESConfig(xadesCfg),
+		)
+		require.NoError(t, err)
+
+		spRef := findSignedPropertiesReference(signature)
+		require.NotNil(t, spRef)
+		require.NotEmpty(t, captured, "serializer should have been invoked")
+
+		// facturae's SignedPropertiesHash defaults to SHA-512 and digests are
+		// base64-encoded (HexEncodeDigests is false).
+		want := sha512.Sum512(captured)
+		assert.Equal(t,
+			base64.StdEncoding.EncodeToString(want[:]),
+			spRef.DigestValue,
+			"DigestValue should match base64(sha512(serializer(spBytes)))",
+		)
+
+		// Sanity check: without the serializer (default canonicalization) the
+		// digest differs.
+		xmlOpt, xadesOpt := facturaeOptions(xadesConfig())
+		baseline, err := xmldsig.Sign(data,
+			xmldsig.WithCertificate(certificate),
+			xmlOpt,
+			xadesOpt,
+		)
+		require.NoError(t, err)
+		baselineSP := findSignedPropertiesReference(baseline)
+		require.NotNil(t, baselineSP)
+		assert.NotEqual(t, baselineSP.DigestValue, spRef.DigestValue)
+	})
+
 	t.Run("should not include policy qualifiers when only URL provided", func(t *testing.T) {
 		cfg := xmldsig.XAdESConfig{
 			Policy: &xmldsig.XAdESPolicyConfig{
@@ -219,6 +269,65 @@ func TestSignature(t *testing.T) {
 
 }
 
+// TestSigningCertificateDigestEncoding locks in that HashPEMText (what bytes
+// are hashed: naked PEM text vs raw DER) and HexEncodeDigests (output encoding:
+// base64(hex(hash)) vs base64(hash)) are independent and applied consistently
+// to the signing certificate digest for every flag combination.
+func TestSigningCertificateDigestEncoding(t *testing.T) {
+	doc := &SampleDoc{
+		TestNamespace: "http://invopop.com/xml/test",
+		Title:         "This is a test",
+	}
+	data, err := xml.Marshal(doc)
+	require.NoError(t, err)
+
+	certificate, err := getCertificate()
+	require.NoError(t, err)
+
+	// The default SigningCertificateHash is SHA-512, so we mirror that here.
+	naked := []byte(certificate.NakedPEM())
+	der, err := base64.StdEncoding.DecodeString(certificate.NakedPEM())
+	require.NoError(t, err)
+
+	digest := func(input []byte, hexEncode bool) string {
+		sum := sha512.Sum512(input)
+		if hexEncode {
+			return base64.StdEncoding.EncodeToString([]byte(hex.EncodeToString(sum[:])))
+		}
+		return base64.StdEncoding.EncodeToString(sum[:])
+	}
+
+	cases := []struct {
+		name        string
+		hashPEMText bool
+		hexEncode   bool
+		want        string
+	}{
+		{"DER + base64", false, false, digest(der, false)},
+		{"DER + base64(hex)", false, true, digest(der, true)},
+		{"PEM text + base64", true, false, digest(naked, false)},
+		{"PEM text + base64(hex)", true, true, digest(naked, true)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := xmldsig.XAdESConfig{
+				HashPEMText:      tc.hashPEMText,
+				HexEncodeDigests: tc.hexEncode,
+			}
+			signature, err := xmldsig.Sign(data,
+				xmldsig.WithCertificate(certificate),
+				xmldsig.WithXAdESConfig(cfg),
+			)
+			require.NoError(t, err)
+
+			got := signature.Object.QualifyingProperties.SignedProperties.
+				SignedSignatureProperties.SigningCertificate.Cert[0].CertDigest.DigestValue
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func xadesConfig() xmldsig.XAdESConfig {
 	return xmldsig.XAdESConfig{
 		Role:        xmldsig.XAdESSignerRole("third party"),
@@ -239,6 +348,18 @@ func facturaeOptions(cfg xmldsig.XAdESConfig) (xmldsig.Option, xmldsig.Option) {
 
 func getCertificate() (*xmldsig.Certificate, error) {
 	return xmldsig.LoadCertificate(testCertificateFile, testCertificatePass)
+}
+
+func findSignedPropertiesReference(sig *xmldsig.Signature) *xmldsig.Reference {
+	if sig == nil || sig.SignedInfo == nil {
+		return nil
+	}
+	for _, r := range sig.SignedInfo.Reference {
+		if r.Type == "http://uri.etsi.org/01903#SignedProperties" {
+			return r
+		}
+	}
+	return nil
 }
 
 func getTimestamp(signature *xmldsig.Signature) string {

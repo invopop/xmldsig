@@ -8,7 +8,6 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/invopop/gobl/uuid"
-	dsig "github.com/russellhaering/goxmldsig"
 )
 
 // Namespaces used in XML-DSig and XAdES.
@@ -27,7 +26,8 @@ const (
 
 // Reference type URIs.
 const (
-	ReferenceTypeObject = "http://www.w3.org/2000/09/xmldsig#Object"
+	ReferenceTypeObject  = "http://www.w3.org/2000/09/xmldsig#Object"
+	XpathFilterAlgorithm = "http://www.w3.org/TR/1999/REC-xpath-19991116"
 )
 
 // Signature contains the complete signature to be added
@@ -49,6 +49,7 @@ type Signature struct {
 // AlgorithmMethod contains URL identifier of the signing algorithm (e.g. RSA-SHA256)
 type AlgorithmMethod struct {
 	Algorithm string `xml:"Algorithm,attr"`
+	XPath     string `xml:"ds:XPath,omitempty"`
 }
 
 // SignedInfo contains the info that will be signed by
@@ -82,7 +83,7 @@ type Transforms struct {
 
 // Value contains the signature itself (base64-encoded)
 type Value struct {
-	ID    string `xml:"Id,attr"`
+	ID    string `xml:"Id,attr,omitempty"`
 	Value string `xml:",chardata"`
 }
 
@@ -132,10 +133,10 @@ type NamedCurve struct {
 const (
 	signatureIDFormat               = "Signature-%s"
 	signatureRootIDFormat           = "Signature-%s-Signature"
-	sigPropertiesIDFormat           = "Signature-%s-SignedProperties"
 	sigQualifyingPropertiesIDFormat = "Signature-%s-QualifyingProperties"
 	signedDataReferenceID           = "Reference-%s"
 	certificateIDFormat             = "Certificate-%s"
+	sigPropertiesIDFormat           = "xadesSignedProperties"
 )
 
 func newSignature(data []byte, opts ...Option) (*Signature, error) {
@@ -316,13 +317,19 @@ func (s *Signature) buildSignedInfo() error {
 		Reference: []*Reference{},
 	}
 
-	// Note: will add namespaces to the original properties
-	// as part of canonicalization, so we expect copies here.
+	var docToProcess = s.doc
+	if s.opts.xmldsigConfig.PreHashTransforms != nil {
+		transformed, err := s.opts.xmldsigConfig.PreHashTransforms(docToProcess)
+		if err != nil {
+			return fmt.Errorf("pre-hash transforms: %w", err)
+		}
+		docToProcess = transformed
+	}
 
 	// Add the document digest
 	dataCanonicalizer := s.opts.xmldsigConfig.DataCanonicalizer
 	dataHash := s.opts.xmldsigConfig.DataHash
-	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
+	canonicalizedDoc, err := canonicalizeWith(docToProcess, s.opts.namespaces, dataCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize document: %w", err)
 	}
@@ -334,7 +341,7 @@ func (s *Signature) buildSignedInfo() error {
 	if err != nil {
 		return fmt.Errorf("document digest algorithm: %w", err)
 	}
-	docTransforms := []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
+	docTransforms := s.opts.xmldsigConfig.DocumentTransforms
 	if !s.opts.xmldsigConfig.OmitDataCanonicalizationTransform {
 		if alg := dataCanonicalizer.Algorithm().String(); alg != "" {
 			docTransforms = append(docTransforms, &AlgorithmMethod{Algorithm: alg})
@@ -397,12 +404,25 @@ func (s *Signature) buildSignedInfo() error {
 		if err != nil {
 			return fmt.Errorf("marshal signed properties: %w", err)
 		}
-		canonicalizedSignedProps, err := canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
-		if err != nil {
-			return fmt.Errorf("canonicalize signed properties: %w", err)
+
+		var spDataToHash []byte
+		if serializer := s.opts.xadesConfig.SignedPropertiesSerializer; serializer != nil {
+			spDataToHash, err = serializer(spBytes)
+			if err != nil {
+				return fmt.Errorf("serialize signed properties: %w", err)
+			}
+		} else {
+			spDataToHash, err = canonicalizeWith(spBytes, ns, signedPropsCanonicalizer)
+			if err != nil {
+				return fmt.Errorf("canonicalize signed properties: %w", err)
+			}
 		}
+
 		signedPropsHash := s.opts.xadesConfig.SignedPropertiesHash
-		spDigest, err := digestBytes(canonicalizedSignedProps, signedPropsHash)
+		spDigest, err := digestBytes(spDataToHash, signedPropsHash)
+		if s.opts.xadesConfig.HexEncodeDigests {
+			spDigest, err = digestBytesHex(spDataToHash, signedPropsHash)
+		}
 		if err != nil {
 			return fmt.Errorf("xades digest: %w", err)
 		}
@@ -410,19 +430,20 @@ func (s *Signature) buildSignedInfo() error {
 		if err != nil {
 			return fmt.Errorf("xades digest algorithm: %w", err)
 		}
-		si.Reference = append(si.Reference, &Reference{
-			URI: "#" + sp.ID,
-			Transforms: &Transforms{
-				Transform: []*AlgorithmMethod{
-					{Algorithm: signedPropsCanonicalizer.Algorithm().String()},
-				},
-			},
+		spRef := &Reference{
+			URI:  "#" + sp.ID,
 			Type: "http://uri.etsi.org/01903#SignedProperties",
 			DigestMethod: &AlgorithmMethod{
 				Algorithm: signedPropsAlgorithm,
 			},
 			DigestValue: spDigest,
-		})
+			Transforms: &Transforms{
+				Transform: []*AlgorithmMethod{
+					{Algorithm: s.opts.xadesConfig.SignedPropertiesCanonicalizer.Algorithm().String()},
+				},
+			},
+		}
+		si.Reference = append(si.Reference, spRef)
 	}
 
 	s.SignedInfo = si
@@ -432,19 +453,17 @@ func (s *Signature) buildSignedInfo() error {
 // buildSignatureValue creates SignatureValue element, containing the
 // signed hash of the SignedInfo element.
 func (s *Signature) buildSignatureValue() error {
-	// Take a copy of the signedInfo so that we can
-	// modify the namespaces for canonicalization.
 	data, err := xml.Marshal(s.SignedInfo)
 	if err != nil {
 		return err
 	}
-	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace) // namespace of ds:Signature
+	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
 	data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize: %w", err)
 	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash)
+	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormatDER)
 	if err != nil {
 		return fmt.Errorf("sign SignedInfo: %w", err)
 	}

@@ -57,6 +57,26 @@ type PrivateKeyInfo struct {
 	PublicKey string
 }
 
+// NewCertificate creates a Certificate from a parsed x509.Certificate and
+// a crypto.Signer
+func NewCertificate(cert *x509.Certificate, key crypto.Signer) (*Certificate, error) {
+	if cert == nil {
+		return nil, fmt.Errorf("certificate is required")
+	}
+	if key == nil {
+		return nil, fmt.Errorf("private key is required")
+	}
+	issuer := &pkix.RDNSequence{}
+	if _, err := asn1.Unmarshal(cert.RawIssuer, issuer); err != nil {
+		return nil, fmt.Errorf("parsing issuer: %w", err)
+	}
+	return &Certificate{
+		privateKey:  key,
+		certificate: cert,
+		issuer:      issuer,
+	}, nil
+}
+
 // LoadCertificate creates a new Certificate instance from a PKCS12 file
 // at the given path with the given password
 func LoadCertificate(path, password string) (*Certificate, error) {
@@ -94,8 +114,10 @@ func LoadCertificateFromBytes(data []byte, password string) (*Certificate, error
 }
 
 // Sign hashes the provided data with the requested hash algorithm and signs the
-// digest using the configured private key.
-func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
+// digest using the configured private key. For ECDSA keys, ecdsaFormat controls
+// whether the signature is returned in concatenated r||s format (W3C XML DSig
+// standard) or raw DER encoding (required by ZATCA).
+func (cert *Certificate) Sign(data string, hash crypto.Hash, ecdsaFormatDER bool) (string, error) {
 	if hash == 0 {
 		hash = crypto.SHA256
 	}
@@ -109,23 +131,19 @@ func (cert *Certificate) Sign(data string, hash crypto.Hash) (string, error) {
 	}
 	digest := hasher.Sum(nil)
 
-	// RSA and ECDSA certificates require different signing code
-	// (even though both implement crypto.Signer)
-	var signature []byte
-	var signingErr error
-	switch cert.privateKey.(type) {
-	case *rsa.PrivateKey:
-		signature, signingErr = cert.privateKey.Sign(rand.Reader, digest, hash)
-	case *ecdsa.PrivateKey:
-		// When using ECDSA, privateKey.Sign returns signature in DER format, but XML DSig
-		// requires the signature to be in the concatenated format (r || s)
-		signature, signingErr = signECDSA(cert.privateKey.(*ecdsa.PrivateKey), digest, hash)
-	default:
-		return "", fmt.Errorf("unsupported key type: %T", cert.privateKey)
+	signature, err := cert.privateKey.Sign(rand.Reader, digest, hash)
+	if err != nil {
+		return "", err
 	}
 
-	if signingErr != nil {
-		return "", signingErr
+	// ECDSA signers return a DER-encoded signature. The W3C XML DSig standard
+	// requires the concatenated r||s form, so convert it unless the caller
+	// explicitly wants the raw DER encoding (required by ZATCA).
+	if cert.PublicKeyAlgorithm() == x509.ECDSA && !ecdsaFormatDER {
+		signature, err = derToConcatenatedECDSA(signature, cert.privateKey.Public())
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return base64.StdEncoding.EncodeToString(signature), nil
@@ -135,12 +153,13 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-// signECDSA creates a signature for the provided digest using the private key,
-// and returns it in the concatenated format (r || s) required by XML DSig
-func signECDSA(privateKey *ecdsa.PrivateKey, digest []byte, hash crypto.Hash) ([]byte, error) {
-	derSig, err := privateKey.Sign(rand.Reader, digest, hash)
-	if err != nil {
-		return nil, err
+// derToConcatenatedECDSA converts a DER-encoded ECDSA signature into the
+// concatenated format (r || s) required by XML DSig. The curve size is derived
+// from the public key so it works for any crypto.Signer implementation.
+func derToConcatenatedECDSA(derSig []byte, pub crypto.PublicKey) ([]byte, error) {
+	ecdsaPub, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("expected ecdsa public key, got %T", pub)
 	}
 
 	var sig ecdsaSignature
@@ -148,7 +167,7 @@ func signECDSA(privateKey *ecdsa.PrivateKey, digest []byte, hash crypto.Hash) ([
 		return nil, err
 	}
 
-	keyBytes := (privateKey.Curve.Params().BitSize + 7) / 8
+	keyBytes := (ecdsaPub.Curve.Params().BitSize + 7) / 8
 	rBytes := sig.R.FillBytes(make([]byte, keyBytes))
 	sBytes := sig.S.FillBytes(make([]byte, keyBytes))
 	signature := append(rBytes, sBytes...)
@@ -156,7 +175,7 @@ func signECDSA(privateKey *ecdsa.PrivateKey, digest []byte, hash crypto.Hash) ([
 	return signature, nil
 }
 
-// Fingerprint returns the requested hash of the certificate bytes.
+// Fingerprint returns the requested hash of the certificate's DER bytes.
 func (cert *Certificate) Fingerprint(hash crypto.Hash) (string, error) {
 	if hash == 0 {
 		hash = crypto.SHA512

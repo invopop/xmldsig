@@ -10,16 +10,20 @@ import (
 
 // XMLDSigConfig configures canonicalization, hashing, and KeyInfo handling for raw XML DSig signatures.
 type XMLDSigConfig struct {
-	DataCanonicalizer                 dsig.Canonicalizer
-	DataHash                          crypto.Hash
-	IncludeKeyValue                   bool
-	ReferenceKeyInfoInSignedInfo      bool
-	KeyInfoHash                       crypto.Hash
-	KeyInfoCanonicalizer              dsig.Canonicalizer
-	SignedInfoCanonicalizer           dsig.Canonicalizer
-	SignedInfoHash                    crypto.Hash
+	DataCanonicalizer            dsig.Canonicalizer
+	DataHash                     crypto.Hash
+	IncludeKeyValue              bool
+	ReferenceKeyInfoInSignedInfo bool
+	KeyInfoHash                  crypto.Hash
+	KeyInfoCanonicalizer         dsig.Canonicalizer
+	SignedInfoCanonicalizer      dsig.Canonicalizer
+	SignedInfoHash               crypto.Hash
+	// ECDSAFormatDER returns ECDSA signatures as raw DER (ZATCA) instead of the W3C-standard r||s form.
+	ECDSAFormatDER                    bool
 	OmitDocumentReferenceType         bool
 	OmitDataCanonicalizationTransform bool
+	DocumentTransforms                []*AlgorithmMethod
+	PreHashTransforms                 func([]byte) ([]byte, error)
 }
 
 // XAdESConfig configures the XAdES-specific properties.
@@ -37,6 +41,17 @@ type XAdESConfig struct {
 	DataObjectFormat *DataObjectFormat
 	Policy           *XAdESPolicyConfig
 	IncludeCaChain   bool
+
+	// When true, digests in XAdES elements are hex-encoded
+	// before base64: base64(hex(hash)) instead of base64(hash).
+	HexEncodeDigests bool
+	// When true, the signing certificate digest is computed
+	// over the base64 PEM text instead of the raw DER bytes.
+	HashPEMText bool
+	// SignedPropertiesSerializer, when set, produces the exact bytes of
+	// <xades:SignedProperties> that are hashed, replacing the default
+	// canonicalization.
+	SignedPropertiesSerializer func([]byte) ([]byte, error)
 }
 
 // normalizeXMLDSigConfig fills missing XMLDSig values with defaults.
@@ -58,6 +73,9 @@ func normalizeXMLDSigConfig(opts XMLDSigConfig) XMLDSigConfig {
 	}
 	if opts.SignedInfoHash == 0 {
 		opts.SignedInfoHash = crypto.SHA256
+	}
+	if len(opts.DocumentTransforms) == 0 {
+		opts.DocumentTransforms = []*AlgorithmMethod{{Algorithm: dsig.EnvelopedSignatureAltorithmId.String()}}
 	}
 	return opts
 }

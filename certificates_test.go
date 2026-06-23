@@ -28,7 +28,7 @@ func TestCertificateLoader(t *testing.T) {
 	})
 
 	t.Run("should sign a string", func(t *testing.T) {
-		signature, err := certificate.Sign("some data to sign", crypto.SHA256)
+		signature, err := certificate.Sign("some data to sign", crypto.SHA256, false)
 		require.NoError(t, err)
 		assert.Equal(t, "Gptu4mP8yyDRAL1zRDm3qabxaqwlGspdZvXNrN6jyMgPsqCBS2coOntOiNGEWHpWNoLLjSrbeq8bqEZ0DH7xEy6MOJrbp615q6XWl4mNFXHfvQmzvp2Uo4qXiXQlFKHZ7T5lxBZmD/4Bw1SRjFpMexu6hzd9cAny/bTghiXOUn81iStM2SYuJnoRL/K5hNEIjuHB8vmtaP6y/PxC+R27Ue6JAGUfhF+Yduum3sHoJUhbWNMojGiZAtNR+n9GKbqq+SSF2SGjXQPzZeJyJ9kDRmdrLMCpwuEVGYbRTImLKWgqqKaMUQr7hoFZCmG3tObgO35TYZ6wIumJE8k149d2LQ==", signature)
 	})
@@ -79,7 +79,7 @@ func TestECCertificateLoader(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, certificate)
 	t.Run("should sign payloads without error", func(t *testing.T) {
-		signature, err := certificate.Sign("ec certificate payload", crypto.SHA256)
+		signature, err := certificate.Sign("ec certificate payload", crypto.SHA256, false)
 		require.NoError(t, err)
 		assert.NotEmpty(t, signature)
 	})
