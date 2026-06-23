@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/beevik/etree v1.6.0
 	github.com/invopop/gobl v0.501.0
-	github.com/russellhaering/goxmldsig v1.5.0
+	github.com/russellhaering/goxmldsig v1.6.0
 	github.com/stretchr/testify v1.11.1
 	software.sslmate.com/src/go-pkcs12 v0.7.0
 )
