@@ -7,7 +7,7 @@ require (
 	github.com/invopop/gobl v0.501.0
 	github.com/russellhaering/goxmldsig v1.5.0
 	github.com/stretchr/testify v1.11.1
-	software.sslmate.com/src/go-pkcs12 v0.7.0
+	software.sslmate.com/src/go-pkcs12 v0.7.2
 )
 
 require (
