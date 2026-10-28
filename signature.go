@@ -1,6 +1,7 @@
 package xmldsig
 
 import (
+	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -317,19 +318,10 @@ func (s *Signature) buildSignedInfo() error {
 		Reference: []*Reference{},
 	}
 
-	var docToProcess = s.doc
-	if s.opts.xmldsigConfig.PreHashTransforms != nil {
-		transformed, err := s.opts.xmldsigConfig.PreHashTransforms(docToProcess)
-		if err != nil {
-			return fmt.Errorf("pre-hash transforms: %w", err)
-		}
-		docToProcess = transformed
-	}
-
 	// Add the document digest
 	dataCanonicalizer := s.opts.xmldsigConfig.DataCanonicalizer
 	dataHash := s.opts.xmldsigConfig.DataHash
-	canonicalizedDoc, err := canonicalizeWith(docToProcess, s.opts.namespaces, dataCanonicalizer)
+	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize document: %w", err)
 	}
@@ -450,22 +442,17 @@ func (s *Signature) buildSignedInfo() error {
 	return nil
 }
 
-// buildSignatureValue creates SignatureValue element, containing the
-// signed hash of the SignedInfo element.
+// buildSignatureValue creates SignatureValue element, containing the signed hash of
+// the SignedInfo element, or of the raw document digest when SignDocumentDigest is set.
 func (s *Signature) buildSignatureValue() error {
-	data, err := xml.Marshal(s.SignedInfo)
+	data, err := s.signatureValueInput()
 	if err != nil {
 		return err
 	}
-	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
-	data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
-	if err != nil {
-		return fmt.Errorf("canonicalize: %w", err)
-	}
 
-	signatureValue, err := s.opts.cert.Sign(string(data[:]), s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormatDER)
+	signatureValue, err := s.opts.cert.Sign(string(data), s.opts.xmldsigConfig.SignedInfoHash, s.opts.xmldsigConfig.ECDSAFormatDER)
 	if err != nil {
-		return fmt.Errorf("sign SignedInfo: %w", err)
+		return fmt.Errorf("sign signature value: %w", err)
 	}
 
 	s.Value = &Value{
@@ -473,6 +460,32 @@ func (s *Signature) buildSignatureValue() error {
 		Value: signatureValue,
 	}
 	return nil
+}
+
+// signatureValueInput returns the bytes the SignatureValue is computed over: the canonical
+// SignedInfo by default, or the decoded document digest when SignDocumentDigest is set.
+func (s *Signature) signatureValueInput() ([]byte, error) {
+	if s.opts.xmldsigConfig.SignDocumentDigest {
+		if s.SignedInfo == nil || len(s.SignedInfo.Reference) == 0 {
+			return nil, fmt.Errorf("sign document digest: missing document reference")
+		}
+		digest, err := base64.StdEncoding.DecodeString(s.SignedInfo.Reference[0].DigestValue)
+		if err != nil {
+			return nil, fmt.Errorf("sign document digest: decode digest: %w", err)
+		}
+		return digest, nil
+	}
+
+	data, err := xml.Marshal(s.SignedInfo)
+	if err != nil {
+		return nil, err
+	}
+	ns := s.opts.namespaces.Add(DSig, s.DSigNamespace)
+	data, err = canonicalizeWith(data, ns, s.opts.xmldsigConfig.SignedInfoCanonicalizer)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalize: %w", err)
+	}
+	return data, nil
 }
 
 // UnsignedProperties contains signature data not included in the SignedInfo (e.g. verified timestamp)

@@ -27,6 +27,53 @@ func TestSigningFlow_AuthRequest(t *testing.T) {
 	verifySigningFlow(t, "data/ksef-auth-request.xml")
 }
 
+func TestSigningFlow_SignDocumentDigest(t *testing.T) {
+	certificate, err := xmldsig.LoadCertificate(testECCertificateFile, testECCertificatePass)
+	require.NoError(t, err)
+	originalXML, err := os.ReadFile("data/invoice-vat.xml")
+	require.NoError(t, err)
+	publicKey, ok := extractPublicKey(t, certificate).(*ecdsa.PublicKey)
+	require.True(t, ok, "expected an ECDSA certificate")
+
+	t.Run("signs the canonical SignedInfo by default", func(t *testing.T) {
+		signature, err := xmldsig.Sign(originalXML,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXAdESConfig(xmldsig.XAdESConfig{}),
+		)
+		require.NoError(t, err)
+
+		signedXML := attachSignatureToDocument(t, originalXML, signature)
+		doc := etree.NewDocument()
+		require.NoError(t, doc.ReadFromBytes(signedXML))
+		signatureElement := findSignatureElement(doc.Root())
+		require.NotNil(t, signatureElement)
+
+		verifySignatureValue(t, signature, signatureElement.Copy(), certificate, collectRootNamespaces(t, originalXML))
+	})
+
+	t.Run("signs the raw document digest when enabled", func(t *testing.T) {
+		signature, err := xmldsig.Sign(originalXML,
+			xmldsig.WithCertificate(certificate),
+			xmldsig.WithXMLDSigConfig(xmldsig.XMLDSigConfig{
+				DataHash:           crypto.SHA256,
+				ECDSAFormatDER:     true,
+				SignDocumentDigest: true,
+			}),
+		)
+		require.NoError(t, err)
+
+		digest, err := base64.StdEncoding.DecodeString(signature.SignedInfo.Reference[0].DigestValue)
+		require.NoError(t, err)
+		signatureValue, err := base64.StdEncoding.DecodeString(signature.Value.Value)
+		require.NoError(t, err)
+
+		hasher := crypto.SHA256.New()
+		hasher.Write(digest)
+		require.True(t, ecdsa.VerifyASN1(publicKey, hasher.Sum(nil), signatureValue),
+			"SignatureValue does not verify over the raw document digest")
+	})
+}
+
 func verifySigningFlow(t *testing.T, xmlPath string) {
 	// 1. Prepare a signed XML
 	certificate, err := xmldsig.LoadCertificate("certs/cert-20260102-131809.pfx", "")

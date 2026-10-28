@@ -23,7 +23,8 @@ type XMLDSigConfig struct {
 	OmitDocumentReferenceType         bool
 	OmitDataCanonicalizationTransform bool
 	DocumentTransforms                []*AlgorithmMethod
-	PreHashTransforms                 func([]byte) ([]byte, error)
+	// SignDocumentDigest signs the raw document digest instead of the canonical SignedInfo, as ZATCA requires.
+	SignDocumentDigest bool
 }
 
 // XAdESConfig configures the XAdES-specific properties.
