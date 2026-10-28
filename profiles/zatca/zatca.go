@@ -39,7 +39,7 @@ func XMLDSigConfig() xmldsig.XMLDSigConfig {
 				Algorithm: dsig.CanonicalXML11AlgorithmId.String(),
 			},
 		},
-		PreHashTransforms: zatcaPreHashTransforms,
+		SignDocumentDigest: true,
 	}
 }
 
@@ -60,81 +60,6 @@ func XAdESConfig() xmldsig.XAdESConfig {
 
 func zatcaTimestampFormatter(t time.Time) string {
 	return t.UTC().Format("2006-01-02T15:04:05Z")
-}
-
-func zatcaPreHashTransforms(xmlData []byte) ([]byte, error) {
-	doc := etree.NewDocument()
-	doc.ReadSettings.PreserveCData = true
-	if err := doc.ReadFromBytes(xmlData); err != nil {
-		return nil, fmt.Errorf("parse xml: %w", err)
-	}
-
-	invoice := doc.Root()
-	if invoice == nil {
-		return xmlData, nil
-	}
-
-	// Insert residual newlines that match ZATCA's XSLT-based element stripping.
-
-	// 1. ext:UBLExtensions — first child element
-	if invoice.SelectElement("UBLExtensions") == nil {
-		if idx := indexOfFirstChildElement(invoice); idx >= 0 {
-			invoice.InsertChildAt(idx, &etree.CharData{Data: "\n  "})
-		}
-	}
-
-	// 2. QR AdditionalDocumentReference — after the last existing ref
-	if !hasQRRef(invoice) {
-		if idx := indexOfLastChildElementByTag(invoice, "AdditionalDocumentReference"); idx >= 0 {
-			invoice.InsertChildAt(idx+1, &etree.CharData{Data: "\n  "})
-		}
-	}
-
-	// 3. cac:Signature — before AccountingSupplierParty
-	if invoice.SelectElement("Signature") == nil {
-		if idx := indexOfChildElementByTag(invoice, "AccountingSupplierParty"); idx >= 0 {
-			invoice.InsertChildAt(idx, &etree.CharData{Data: "\n  "})
-		}
-	}
-
-	return doc.WriteToBytes()
-}
-
-func hasQRRef(invoice *etree.Element) bool {
-	for _, ref := range invoice.SelectElements("AdditionalDocumentReference") {
-		if id := ref.SelectElement("ID"); id != nil && strings.TrimSpace(id.Text()) == "QR" {
-			return true
-		}
-	}
-	return false
-}
-
-func indexOfFirstChildElement(el *etree.Element) int {
-	for i, child := range el.Child {
-		if _, ok := child.(*etree.Element); ok {
-			return i
-		}
-	}
-	return -1
-}
-
-func indexOfChildElementByTag(el *etree.Element, tag string) int {
-	for i, child := range el.Child {
-		if ce, ok := child.(*etree.Element); ok && ce.Tag == tag {
-			return i
-		}
-	}
-	return -1
-}
-
-func indexOfLastChildElementByTag(el *etree.Element, tag string) int {
-	last := -1
-	for i, child := range el.Child {
-		if ce, ok := child.(*etree.Element); ok && ce.Tag == tag {
-			last = i
-		}
-	}
-	return last
 }
 
 // issuerAttrNames extends Go's stdlib pkix attribute-name table with
