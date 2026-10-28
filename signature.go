@@ -318,19 +318,10 @@ func (s *Signature) buildSignedInfo() error {
 		Reference: []*Reference{},
 	}
 
-	var docToProcess = s.doc
-	if s.opts.xmldsigConfig.PreHashTransforms != nil {
-		transformed, err := s.opts.xmldsigConfig.PreHashTransforms(docToProcess)
-		if err != nil {
-			return fmt.Errorf("pre-hash transforms: %w", err)
-		}
-		docToProcess = transformed
-	}
-
 	// Add the document digest
 	dataCanonicalizer := s.opts.xmldsigConfig.DataCanonicalizer
 	dataHash := s.opts.xmldsigConfig.DataHash
-	canonicalizedDoc, err := canonicalizeWith(docToProcess, s.opts.namespaces, dataCanonicalizer)
+	canonicalizedDoc, err := canonicalizeWith(s.doc, s.opts.namespaces, dataCanonicalizer)
 	if err != nil {
 		return fmt.Errorf("canonicalize document: %w", err)
 	}
