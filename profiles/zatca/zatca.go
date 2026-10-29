@@ -58,8 +58,10 @@ func XAdESConfig() xmldsig.XAdESConfig {
 	}
 }
 
+// zatcaTimestampFormatter renders the signing time in Saudi Arabia local time.
 func zatcaTimestampFormatter(t time.Time) string {
-	return t.UTC().Format("2006-01-02T15:04:05Z")
+	saudiArabiaTime := time.FixedZone("AST", 3*60*60)
+	return t.In(saudiArabiaTime).Format("2006-01-02T15:04:05")
 }
 
 // issuerAttrNames extends Go's stdlib pkix attribute-name table with
