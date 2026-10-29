@@ -6,11 +6,23 @@ import (
 	"time"
 )
 
+// TestZatcaTimestampFormatter checks that signing times are rendered in Saudi Arabia time without a zone suffix.
 func TestZatcaTimestampFormatter(t *testing.T) {
-	// A non-UTC input must be normalized to UTC and rendered with a trailing Z.
-	ts := time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("CET", 3600))
-	if got := zatcaTimestampFormatter(ts); got != "2024-01-02T02:04:05Z" {
-		t.Fatalf("unexpected timestamp format: %s", got)
+	tests := []struct {
+		name string
+		in   time.Time
+		want string
+	}{
+		{"utc", time.Date(2025, 7, 8, 9, 4, 41, 0, time.UTC), "2025-07-08T12:04:41"},
+		{"utc crossing midnight", time.Date(2024, 12, 31, 22, 30, 0, 0, time.UTC), "2025-01-01T01:30:00"},
+		{"non-utc", time.Date(2024, 1, 2, 3, 4, 5, 0, time.FixedZone("CET", 3600)), "2024-01-02T05:04:05"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := zatcaTimestampFormatter(tt.in); got != tt.want {
+				t.Fatalf("got %s, want %s", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -19,7 +31,7 @@ func TestZatcaTimestampFormatter(t *testing.T) {
 // redeclaration and self-closing empty elements.
 const sampleSignedProperties = `<xades:SignedProperties Id="xadesSignedProperties">` +
 	`<xades:SignedSignatureProperties>` +
-	`<xades:SigningTime>2024-01-01T00:00:00Z</xades:SigningTime>` +
+	`<xades:SigningTime>2024-01-01T03:00:00</xades:SigningTime>` +
 	`<xades:Cert><xades:CertDigest>` +
 	`<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></ds:DigestMethod>` +
 	`<ds:DigestValue>ABC123</ds:DigestValue>` +
